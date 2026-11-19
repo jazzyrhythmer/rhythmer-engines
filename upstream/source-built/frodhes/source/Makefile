@@ -1,0 +1,335 @@
+# SPDX-License-Identifier: GPL-3.0-only
+# Frodhes: common tasks. Everything installs and builds inside the project (.local/, build/).
+PY      ?= $(if $(wildcard .local/venv/bin/python),.local/venv/bin/python,python3)
+CC      ?= cc
+HOSTBIN ?= build/host/frodhes
+HOST_DEFS ?=                # other builds, e.g. make test HOST_DEFS=-DRH_VOICES=9u HOSTBIN=build/host9/frodhes (default: 10)
+CFLAGS_HOST := -O2 -Wall -Wno-unused-function -DDINGHY_HOST -DAPP_VER='"dev"' -Ifirmware/src -Ifirmware/gen $(HOST_DEFS)
+
+.PHONY: all setup host quick pristine release-diff clean-renders test testv test10 test-c1 test-smk pytest firmware clean
+
+all: test pytest
+
+setup:                     ## project-local venv, toolchain and the 3 SDK files
+	python3 -m venv .local/venv
+	.local/venv/bin/pip install -q -r requirements.txt
+	[ -x .local/jieli/toolchain/pi32v2/bin/clang ] || sh tools/get_toolchain.sh .local/jieli
+	sh tools/get_sdk.sh .local/fw-AC79_AIoT_SDK
+
+# the defs a host binary was built with: rewritten only when HOST_DEFS changes, so the binary is rebuilt then (a stale
+# one-core build never answers for HOST_DEFS=-DFR_C1=1, 2026-11-14). The comparison also runs when the Makefile is
+# read and forces the rebuild: make's 1 s timestamps miss a stamp written in the binary's second, and make reads the
+# binary's time before the stamp rule runs, so removing the binary there left none for the whole run (2026-11-15)
+ifneq ($(shell printf '%s\n' '$(HOST_DEFS)' | cmp -s - $(HOSTBIN).defs 2>/dev/null || echo x),)
+$(HOSTBIN): FORCE
+endif
+$(HOSTBIN).defs: FORCE
+	@mkdir -p $(dir $@); printf '%s\n' '$(HOST_DEFS)' | cmp -s - $@ || printf '%s\n' '$(HOST_DEFS)' > $@
+FORCE:
+
+$(HOSTBIN): firmware/src/*.c firmware/src/*.h firmware/gen/*.h tests/host.c $(HOSTBIN).defs
+	@mkdir -p build/host $(dir $@)
+	$(CC) $(CFLAGS_HOST) -o $@.$$$$ firmware/src/frodhes.c -lm && mv -f $@.$$$$ $@   # (a new file, renamed in: a test running it never sees it half-written)
+
+HQBIN := build/host-hq/frodhes
+$(HQBIN): firmware/src/*.c firmware/src/*.h firmware/src/hq/* firmware/gen/*.h tests/host.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_HOST) $(MOVE_DEFS) -DHQ_DEFAULT=1 -o $@.$$$$ firmware/src/frodhes.c -lm && mv -f $@.$$$$ $@
+
+QUICK ?= 1                 # make test QUICK=0: skip make quick (bisecting a known-bad tree only; CI never does)
+quick: $(HOSTBIN) $(HQBIN) ## FIRST on every change, mandatory (under 2 min warm; the first stage of make test / pytest):
+                           ## v127 distortion and the key path, every effect pristine, the FX bypass level, the
+                           ## absolute level and peak vs the last release, MIDI velocity untouched, the key-up clicks,
+                           ## the worst-case crackle, the pristine grid per TYPE (tools/quick.py; build/quick/report.txt)
+	@if [ "$(strip $(QUICK))" = 0 ]; then echo "WARNING: make quick SKIPPED (QUICK=0)"; else \
+	  mkdir -p build/quick; \
+	  $(PY) tools/quick.py --fm1 $(HOSTBIN) --hq $(HQBIN) > build/quick/quick.log 2>&1 && tail -1 build/quick/quick.log \
+	  || { grep -v '^PASS' build/quick/quick.log; echo "make quick: FAIL (build/quick/report.txt): the run stops here"; exit 1; }; fi
+
+PRISTINE ?= 1              # make pristine PRISTINE=0: skip it
+pristine: $(HOSTBIN) $(HQBIN)   ## the pristine grid alone (make quick runs it too; seconds): every TYPE of
+                           ## every engine, FM-1 and HQ builds, against the last release with pristine ceilings
+                           ## (tools/release_diff.py --grid fast; tests/expected_changes.yaml lists the intended moves)
+	@if [ "$(strip $(PRISTINE))" = 0 ]; then echo "WARNING: the pristine gate SKIPPED (PRISTINE=0)"; else \
+	  mkdir -p build/release_diff; \
+	  $(PY) tools/release_diff.py --grid fast --fm1 $(HOSTBIN) --hq $(HQBIN) --report build/release_diff/fast.txt \
+	    > build/release_diff/fast.log 2>&1 && head -1 build/release_diff/fast.log | sed 's/^/pristine: /' \
+	  || { head -60 build/release_diff/fast.log; echo "pristine: FAIL (build/release_diff/fast.txt): the run stops here"; exit 1; }; fi
+
+release-diff:              ## the NET, not the first check: the full release diff against the last release (about a
+                           ## minute), before a candidate's device install and nightly; build/release_diff/full.txt
+	@mkdir -p build/release_diff
+	$(PY) tools/release_diff.py --grid full --report build/release_diff/full.txt
+
+host: $(HOSTBIN)           ## the firmware on this computer (fake FM-1)
+	PYTHON=$(PY) tests/run_host.sh
+
+test: quick $(HOSTBIN)     ## make quick, then every script in tests/scripts must pass its expects
+	@fail=0; for s in tests/scripts/*.txt; do n=$$(basename $$s .txt); \
+	  if $(HOSTBIN) build/host/$$n $$s > build/host/$$n.log 2>&1; then echo "ok    $$n"; \
+	  else echo "FAIL  $$n (build/host/$$n.log)"; fail=1; fi; done; exit $$fail
+
+testv:                     ## another voice count: make testv V=8 (or 9, 10) runs every script on build/host<V>
+                           ## (-DFR_VOICES=<V>u: both engines at V), tests/scripts<V>/ in place of the default steal
+                           ## scripts (every engine 10 voices)
+	@test -n "$(V)" -a -d tests/scripts$(V) || { echo "make testv V=N needs tests/scripts<N>/ (its steal scripts)"; exit 2; }
+	@$(MAKE) -s build/host$(V)/frodhes HOSTBIN=build/host$(V)/frodhes HOST_DEFS=-DFR_VOICES=$(V)u
+	@fail=0; for s in tests/scripts/*.txt tests/scripts$(V)/*.txt; do n=$$(basename $$s .txt); \
+	  case $$s in tests/scripts/*_steal_release.txt) continue;; esac; \
+	  if build/host$(V)/frodhes build/host$(V)/$$n $$s > build/host$(V)/$$n.log 2>&1; then echo "ok    $$n"; \
+	  else echo "FAIL  $$n (build/host$(V)/$$n.log)"; fail=1; fi; done; exit $$fail
+
+test10:                    ## make testv V=10
+	@$(MAKE) -s testv V=10
+
+test-c1:                   ## the two-core build on the host (FR_C1: 14 voices, the full-rate reverb, c1_host.h's twin):
+                           ## every script, tests/scripts14/ for the steal scripts
+	@$(MAKE) -s build/host-c1/frodhes HOSTBIN=build/host-c1/frodhes HOST_DEFS=-DFR_C1=1
+	@fail=0; for s in tests/scripts/*.txt tests/scripts14/*.txt; do n=$$(basename $$s .txt); \
+	  case $$s in tests/scripts/*_steal_release.txt) continue;; esac; \
+	  if build/host-c1/frodhes build/host-c1/$$n $$s > build/host-c1/$$n.log 2>&1; then echo "ok    $$n"; \
+	  else echo "FAIL  $$n (build/host-c1/$$n.log)"; fail=1; fi; done; exit $$fail
+
+test-c1-lat:               ## the two-core package's build on the host (FR_C1_LAT: 128-frame interrupts, note starts per
+                           ## interrupt, the 64-frame tail): every script with FRODHES_LAT_SYNC=1 (a block's interrupts
+                           ## back to back: the panel as test-c1 sees it), then in real time (tests/lat/known.txt: run
+                           ## to the end, their millisecond panel expects not judged)
+	@$(MAKE) -s build/host-c1lat/frodhes HOSTBIN=build/host-c1lat/frodhes HOST_DEFS="-DFR_C1=1 -DFR_C1_LAT=1"
+	@fail=0; for s in tests/scripts/*.txt tests/scripts14/*.txt; do n=$$(basename $$s .txt); \
+	  case $$s in tests/scripts/*_steal_release.txt) continue;; esac; \
+	  if FRODHES_LAT_SYNC=1 build/host-c1lat/frodhes build/host-c1lat/s_$$n $$s > build/host-c1lat/s_$$n.log 2>&1; then echo "ok    sync $$n"; \
+	  else echo "FAIL  sync $$n (build/host-c1lat/s_$$n.log)"; fail=1; fi; \
+	  build/host-c1lat/frodhes build/host-c1lat/$$n $$s > build/host-c1lat/$$n.log 2>&1; rc=$$?; \
+	  if [ $$rc = 0 ]; then echo "ok    real $$n"; \
+	  elif grep -qx "$$n" tests/lat/known.txt && [ $$rc -lt 64 ]; then echo "ok    real $$n (known: $$rc panel expects)"; \
+	  else echo "FAIL  real $$n (build/host-c1lat/$$n.log)"; fail=1; fi; done; exit $$fail
+
+SMKBIN  := build/host-smk/frodhes
+SMK_DEFS := -DBOARD_SMK37=1 -DFR_VOICES=10u
+$(SMKBIN): firmware/src/*.c firmware/src/*.h firmware/hal/*.h firmware/gen/*.h tests/host.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS_HOST) $(SMK_DEFS) -o $@ firmware/src/frodhes.c -lm
+
+test-smk: $(SMKBIN)        ## the SMK-37 build on the host (10 voices): every script (the FM-1's button / knob / LED
+                           ## ids on the SMK buttons of the same name, tests/host.c), tests/scripts10/ for the steal
+                           ## scripts, tests/smk/ (its own controls); each flash call checked against the SMK allow-list.
+                           ## The FM-1-only scripts (TRS IN, the key LEDs) are listed in tests/smk/known.txt: reported, not
+                           ## failed
+	@fail=0; for s in tests/scripts/*.txt tests/scripts10/*.txt tests/smk/*.txt; do n=$$(basename $$s .txt); \
+	  case $$s in tests/scripts/*_steal_release.txt|tests/smk/known.txt) continue;; esac; \
+	  if $(SMKBIN) build/host-smk/$$n $$s > build/host-smk/$$n.log 2>&1; then echo "ok    $$n"; \
+	  elif grep -q "FAIL flash" build/host-smk/$$n.log; then echo "FAIL  $$n: a flash call refused (build/host-smk/$$n.log)"; fail=1; \
+	  elif grep -qx "$$n" tests/smk/known.txt; then echo "known $$n (FM-1 only, tests/smk/known.txt; build/host-smk/$$n.log)"; \
+	  else echo "FAIL  $$n (build/host-smk/$$n.log)"; fail=1; fi; done; exit $$fail
+
+PYTEST_N ?= auto           # make pytest PYTEST_N=4 (or 0: serial); serial anyway without pytest-xdist
+SHARD ?=                   # make pytest SHARD=2/4: only shard 2 of 4 (tools/pytest_shard.py; ci.yml's host jobs)
+PYTEST_FILES = $(if $(strip $(SHARD)),$$($(PY) tools/pytest_shard.py $(subst /, ,$(strip $(SHARD)))),tests/py)
+pytest: quick              ## make quick, then the Python tools' unit tests (analysis, generators), in parallel with pytest-xdist
+                           ## (the long run: the net before a candidate and nightly, after make quick)
+	@if [ "$(strip $(PYTEST_N))" != 0 ] && $(PY) -c "import xdist" 2>/dev/null; then \
+	  echo "$(PY) tools/pytest_run.py -q -n $(strip $(PYTEST_N)) --dist loadgroup -- $(PYTEST_FILES)"; \
+	  $(PY) tools/pytest_run.py -q -n $(strip $(PYTEST_N)) --dist loadgroup -- $(PYTEST_FILES); \
+	else echo "$(PY) tools/pytest_run.py -q -- $(PYTEST_FILES)  (serial: no pytest-xdist)"; \
+	  $(PY) tools/pytest_run.py -q -- $(PYTEST_FILES); fi
+
+firmware:                  ## build/frodhes.fwsc (Docker on macOS)
+	PYTHON=$(PY) ./build.sh
+
+clean-renders:             ## the tests' render folders (a make pytest leaves ~10 GB in build/host/gw*): only these;
+                           ## the binaries, build/memo, device takes (build/hil) and the gate queue's files stay
+	rm -rf build/host/gw* build/host/py build/hq_test build/hq_bars_test build/move_levels build/bar_cards \
+	  build/dry_dist build/gate_h/hq-* build/release_diff/cand-* build/release_diff/last-fast build/release_diff/last-full
+	rm -f build/host/*.wav build/host/*.ppm build/host/*.png build/host/*.log
+
+clean:
+	rm -rf build
+
+# ---- the Move (a Schwung sound generator, aarch64 Linux): move/, private plan 05 ----
+# On macOS everything runs in the arm64 bookworm image (move/docker; light: 2 CPUs); on Linux arm64 (CI) natively:
+# make move MOVE_RUN=
+MOVE_IMG  ?= frodhes-move:bookworm
+MOVE_RUN  ?= $(if $(filter Darwin,$(shell uname -s)),docker run --rm --cpus=2 --platform linux/arm64 -v "$(CURDIR)":/src -w /src $(MOVE_IMG),)
+MOVE_CC   ?= gcc
+MOVE_VER  ?= 0.0.0-dev
+# a dev build's VERSION card (MAPPINGS): DEV and the commit
+MOVE_GIT  ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null)
+MOVE_DEFS ?= -DFR_VOICES=16u -DFR_HQ=1 -DFR_BYP_KEEP_CMP=1 -DFR_REV_HQ=1
+MOVE_CFLAGS := -O2 -fPIC -ffp-contract=off -std=gnu11 -Wall -Wno-unused-function -Wno-unused-variable \
+  -fvisibility=hidden -ffile-prefix-map=$(CURDIR)=. -DAPP_VER='"$(MOVE_VER)"' -DAPP_GIT='"$(MOVE_GIT)"' $(MOVE_DEFS) \
+  -Imove/compat -Ifirmware/src -Ifirmware/gen
+MOVE_OUT  := build/move/frodhes
+MOVE_LOADER_CFLAGS := -O2 -fPIC -std=gnu11 -Wall -Wextra -fvisibility=hidden -ffile-prefix-map=$(CURDIR)=. -Imove
+
+.PHONY: move-image move move-native move-tools-native test-move test-move-native gate-p gate-p-native gate-m gate-h move-probe test-move-probe
+move-image:                ## the Move build image (Debian bookworm arm64, about 250 MB)
+	docker build --platform linux/arm64 -t $(MOVE_IMG) move/docker
+
+move:                      ## build/move/frodhes/{dsp.so,engine.so,module.json} + build/move/frodhes-module.tar.gz
+	$(MOVE_RUN) make -s move-native MOVE_VER=$(MOVE_VER) MOVE_GIT=$(MOVE_GIT)
+
+move-native:
+	@mkdir -p $(MOVE_OUT)
+	@# engine.so the plugin; dsp.so the loader that gives each slot its own copy of it (move/move_loader.c)
+	$(MOVE_CC) $(MOVE_CFLAGS) -shared -Wl,-z,defs -o $(MOVE_OUT)/engine.so move/move_plugin.c move/coro/coro_aarch64.S -lm
+	$(MOVE_CC) $(MOVE_LOADER_CFLAGS) -shared -Wl,-z,defs -o $(MOVE_OUT)/dsp.so move/move_loader.c -ldl -lpthread
+	@# (module.json's version: MOVE_VER, the release's X.Y.Z; the committed file says 0.0.0-dev, the default)
+	@if [ -f move/module/module.json ]; then sed 's/"version": "0.0.0-dev"/"version": "$(MOVE_VER)"/' move/module/module.json > $(MOVE_OUT)/module.json; else \
+	  printf '{"id":"frodhes","name":"Frodhes","version":"%s","dsp":"dsp.so","api_version":2,"capabilities":{"audio_out":true,"midi_in":true,"component_type":"sound_generator"}}\n' "$(MOVE_VER)" > $(MOVE_OUT)/module.json; fi
+	@if [ -f move/module/help.json ]; then cp move/module/help.json $(MOVE_OUT)/; fi
+	@if [ -f move/module/screen.js ]; then cp move/module/screen.js $(MOVE_OUT)/; fi
+	@if [ -f move/module/canvas.js ]; then cp move/module/canvas.js $(MOVE_OUT)/; fi
+	@if [ -f move/module/ui_chain.js ]; then cp move/module/ui_chain.js $(MOVE_OUT)/; fi
+	@cp LICENSE $(MOVE_OUT)/LICENSE
+	@# reproducible (M7-02: the release compares the tarball's sha256 with the one tested on the Move): sorted
+	@# names, no times, owners or umask in it, gzip without its name and time
+	tar -C build/move --sort=name --mtime=@0 --owner=0 --group=0 --numeric-owner --mode=u+rwX,go+rX,go-w -cf - \
+	  $$(cd build/move && ls frodhes/dsp.so frodhes/engine.so frodhes/module.json frodhes/help.json frodhes/screen.js frodhes/canvas.js frodhes/ui_chain.js frodhes/LICENSE 2>/dev/null) \
+	  | gzip -9n > build/move/frodhes-module.tar.gz
+	@ls -l $(MOVE_OUT)/dsp.so $(MOVE_OUT)/engine.so build/move/frodhes-module.tar.gz
+
+test-move:                 ## the Move checks: exports/imports, the coroutine, the bridge (api, Gate P, eq), persistence (M1-08)
+	$(MOVE_RUN) make -s test-move-native
+
+test-move-native: move-native
+	@for f in dsp.so engine.so; do syms=$$(nm -D --defined-only $(MOVE_OUT)/$$f | awk '{print $$3}'); \
+	  [ "$$syms" = move_plugin_init_v2 ] || { echo "FAIL exports $$f: $$syms"; exit 1; }; echo "ok    exports $$f: $$syms"; done
+	@bad=$$(nm -D --undefined-only $(MOVE_OUT)/dsp.so | awk '{print $$2}' | grep -vE '^(_ITM_|__cxa_finalize|__gmon_start__)' | \
+	  grep -vE '^(calloc|free|memset|strlen|strcmp|strncmp|strstr|strrchr|snprintf|clock_gettime|getpid|open|open64|close|read|write|rename|unlink|mkdir|stat|stat64|__errno_location|dlopen|dlsym|dlclose|dladdr|opendir|readdir|readdir64|closedir|strncmp|pthread_mutex_lock|pthread_mutex_unlock)@' || true); \
+	  [ -z "$$bad" ] || { echo "FAIL loader imports beyond the allow-list: $$bad"; exit 1; }; echo "ok    loader imports"
+	@bad=$$(nm -D --undefined-only $(MOVE_OUT)/engine.so | awk '{print $$2}' | grep -vE '^(_ITM_|__cxa_finalize|__gmon_start__)' | \
+	  grep -vE '^(calloc|free|malloc|aligned_alloc|memcmp|memcpy|memmove|memset|strlen|strcmp|strncmp|strchr|strstr|snprintf|sprintf|__isoc99_sscanf|atoi|strtol|clock_gettime|abort|__getauxval|pthread_create|pthread_join|pthread_self|pthread_setschedparam|sched_setaffinity|nanosleep|open|open64|close|read|write|fsync|flock|dladdr|rename|unlink|mkdir|stat|stat64|__errno_location|fopen|fopen64|fclose|fwrite)@' || true); \
+	  [ -z "$$bad" ] || { echo "FAIL engine imports beyond the allow-list: $$bad"; exit 1; }; echo "ok    engine imports"
+	@mkdir -p build/move/t
+	@$(MOVE_CC) -O2 -Wall -Wextra -o build/move/t/coro move/tests/test_coro.c move/coro/coro_aarch64.S
+	build/move/t/coro
+	@build/move/t/coro selftest >/dev/null 2>&1; [ $$? -ne 0 ] && echo "ok    seccomp guard kills a syscall" || { echo "FAIL seccomp guard"; exit 1; }
+	@$(MOVE_CC) -O1 -std=gnu11 -Wall -o build/move/smoke move/tests/smoke.c -ldl
+	build/move/smoke $(MOVE_OUT)/dsp.so
+	@$(MOVE_CC) -O1 -g -std=gnu11 -Wall -Wextra -o build/move/t/test_bridge move/tests/test_bridge.c -ldl
+	@# (the engine on its own: one app a file; then the loader, the shipping dsp.so: a copy a slot)
+	build/move/t/test_bridge api $(MOVE_OUT)/engine.so
+	build/move/t/test_bridge hq $(MOVE_OUT)/dsp.so
+	build/move/t/test_bridge boot $(MOVE_OUT)/dsp.so move/tests/boot_keys.txt
+	build/move/t/test_bridge gatep $(MOVE_OUT)/engine.so 10000
+	build/move/t/test_bridge gatep $(MOVE_OUT)/dsp.so 10000
+	@$(MOVE_CC) -O1 -g -std=gnu11 -Wall -Wextra -o build/move/t/test_multi move/tests/test_multi.c -ldl
+	@rm -rf build/move/t/multi
+	build/move/t/test_multi $(MOVE_OUT)/dsp.so build/move/t/multi
+	@rm -rf build/move/t/multi
+	@$(MOVE_CC) -O1 -std=gnu11 -Wall -Wextra -o build/move/t/test_store move/tests/test_store.c
+	@rm -rf build/move/t/store build/move/t/persist build/move/t/run.*
+	build/move/t/test_store build/move/t/store 40
+	@mkdir -p build/move/t/persist
+	build/move/t/test_bridge persist $(MOVE_OUT)/engine.so build/move/t/persist save
+	build/move/t/test_bridge persist $(MOVE_OUT)/engine.so build/move/t/persist check
+	@rm -rf build/move/t/store build/move/t/persist build/move/t/run.*
+	MOVE_DEFS='$(MOVE_DEFS)' move/tests/run_eq.sh
+
+move-tools-native: move-native   ## (the plugin and build/move/t/test_bridge only: tests/py/test_move_params.py)
+	@mkdir -p build/move/t
+	@$(MOVE_CC) -O1 -g -std=gnu11 -Wall -Wextra -o build/move/t/test_bridge move/tests/test_bridge.c -ldl
+
+gate-p:                    ## Gate P (M1-11): test-move's guards, then ASan + UBSan builds through every bridge test
+	$(MOVE_RUN) make -s gate-p-native
+
+# (-fno-sanitize=shift-base: shared DSP shifts negative values left at 16 places, gcc defines it; fixed after 0.9.7)
+MOVE_SAN := -O1 -g -fsanitize=address,undefined -fno-sanitize=shift-base -fno-sanitize-recover=undefined -fno-omit-frame-pointer
+gate-p-native: test-move-native
+	@mkdir -p build/move/san
+	$(MOVE_CC) $(filter-out -O2,$(MOVE_CFLAGS)) $(MOVE_SAN) -shared -o build/move/san/engine.so move/move_plugin.c move/coro/coro_aarch64.S -lm 2>/dev/null
+	$(MOVE_CC) $(filter-out -O2,$(MOVE_LOADER_CFLAGS)) $(MOVE_SAN) -shared -o build/move/san/dsp.so move/move_loader.c -ldl -lpthread
+	$(MOVE_CC) $(MOVE_SAN) -DNO_GUARDS -std=gnu11 -o build/move/san/test_bridge move/tests/test_bridge.c -ldl
+	$(MOVE_CC) $(MOVE_SAN) -std=gnu11 -o build/move/san/test_multi move/tests/test_multi.c -ldl
+	ASAN_OPTIONS=detect_leaks=0 build/move/san/test_bridge api build/move/san/engine.so
+	ASAN_OPTIONS=detect_leaks=0 build/move/san/test_bridge gatep build/move/san/engine.so 10000
+	ASAN_OPTIONS=detect_leaks=0 build/move/san/test_bridge gatep build/move/san/dsp.so 10000
+	@rm -rf build/move/san/multi
+	ASAN_OPTIONS=detect_leaks=0 build/move/san/test_multi build/move/san/dsp.so build/move/san/multi
+	@rm -rf build/move/san/persist build/move/san/multi; mkdir -p build/move/san/persist
+	ASAN_OPTIONS=detect_leaks=0 build/move/san/test_bridge persist build/move/san/engine.so build/move/san/persist save
+	ASAN_OPTIONS=detect_leaks=0 build/move/san/test_bridge persist build/move/san/engine.so build/move/san/persist check
+	@rm -rf build/move/san/persist build/move/t/run.*
+	@for s in move/tests/scripts/*.txt; do n=$$(basename $$s .txt); \
+	  build/move/t/host build/move/san/$$n $$s > /dev/null 2>&1 && \
+	  ASAN_OPTIONS=detect_leaks=0 build/move/san/test_bridge eq build/move/san/dsp.so $$s build/move/san/$$n.wav || exit 1; \
+	  rm -f build/move/san/$$n.wav build/move/san/$$n-*.ppm; done
+	@echo "ok    gate P"
+
+gate-m: move               ## Gate M (M1-10): the shipping dsp.so replays every MIDI-driven Gate R render byte-identical
+	python3 tools/gate_m.py
+
+gate-h:                    ## Gate H: the HQ Rhodes' renders (tests/hq/) against tests/baselines/renders-hq.sha256
+	python3 tools/gate_h.py
+
+move-probe:                ## the device-session probe (move/probe/README.md)
+	$(MOVE_RUN) make -s -C move/probe -j2
+
+test-move-probe:           ## the probe's dlopen host test
+	$(MOVE_RUN) make -s -C move/probe -j2 test
+
+# ---- the desktop plugin (CLAP, VST3, Audio Unit v2; docs/PLUGIN.md): plugin/, the next-release plan section B ----
+# Light by default: nice -n 15 and 2 jobs (PLUGIN_J). The bundles land in build/plugin/bundles; nothing is installed.
+PLUGIN_J     ?= 2
+PLUGIN_BUILD ?= build/plugin
+PLUGIN_NICE  ?= nice -n 15
+.PHONY: plugin-deps plugin test-plugin gate-d plugin-dist plugin-pack plugin-win plugin-linux plugin-stress plugin-hosts
+plugin-deps:               ## the pinned plugin dependencies (plugin/deps.lock) into .local/plugin-deps
+	sh tools/plugin_deps.sh
+
+plugin:                    ## build/plugin/bundles/Frodhes.{clap,vst3,component} (macOS: universal arm64 + x86_64)
+	@test -d .local/plugin-deps/clap || sh tools/plugin_deps.sh --libs
+	@test -f $(PLUGIN_BUILD)/CMakeCache.txt || $(PLUGIN_NICE) cmake -S plugin -B $(PLUGIN_BUILD) \
+	  $(if $(shell command -v ninja),-G Ninja,) -DFRP_VERSION=$(or $(PLUGIN_VER),0.0.0-dev)
+	$(PLUGIN_NICE) cmake --build $(PLUGIN_BUILD) -j$(PLUGIN_J)
+
+test-plugin: plugin        ## the coroutine, the headless host's selftest (params, state, rates, 16 slots), the
+                           ## parameter table up to date, a quick Gate D with the core (presets, learn, tempo ...)
+	$(PLUGIN_BUILD)/frp_test_coro
+	$(PLUGIN_BUILD)/frp_clap_render $(PLUGIN_BUILD)/bundles/Frodhes.clap --selftest
+	$(PY) tools/gen_plugin_params.py --check
+	FRP_BUILD=$(PLUGIN_BUILD) $(PY) tools/gate_d.py --quick --only hq,rate48,core
+	FRP_BUILD=$(PLUGIN_BUILD) $(PY) -m pytest -q tests/py/test_plugin_gui.py tests/py/test_plugin_tail.py
+
+gate-d: plugin             ## Gate D: the plugin renders the host build's audio (tools/gate_d.py, every mode)
+	FRP_BUILD=$(PLUGIN_BUILD) $(PY) tools/gate_d.py
+
+DIST_ENGINES ?= hq
+plugin-dist: plugin        ## the dry-distortion gate (tools/dry_dist.py, against 0.9.11) through the CLAP, VST3 and AU
+                           ## (macOS; the plugin's HQ sound; tools/plugin_dist.py)
+	FRP_BUILD=$(PLUGIN_BUILD) $(PY) tools/plugin_dist.py --engines $(DIST_ENGINES)
+
+plugin-pack: plugin        ## build/plugin-pkg/frodhes-plugin-macos.pkg + .zip (ad-hoc signed; docs/PLUGIN.md Signing)
+	sh tools/plugin_pack.sh macos $(PLUGIN_BUILD)
+	$(PY) tools/plugin_depcheck.py macos $(PLUGIN_BUILD)/bundles
+
+plugin-win:                ## Windows x64 (clang-cl over xwin; tools/plugin_win.sh setup once): build, depcheck,
+                           ## the wine tests (coroutine, controller, view, CLAP host, Gate D subset), the zip
+	bash tools/plugin_win.sh all
+
+plugin-linux:              ## Linux in Docker (Ubuntu 20.04): build, depcheck, the Xvfb tests, the zip (x86_64 and aarch64)
+	FRP_LINUX_ARCH=x86_64 bash tools/plugin_linux.sh all
+	FRP_LINUX_ARCH=aarch64 bash tools/plugin_linux.sh all
+
+STRESS_MIN ?= 30
+plugin-stress: plugin      ## macOS: STRESS_MIN (30) minutes in a DAW-like host: 3 instances, engines, presets, automation
+                           ## floods, the window opened and closed, state round trips, memory (plugin/tests/clap_stress.m)
+	FRODHES_PRESET_DIR=$(PLUGIN_BUILD)/stress-presets $(PLUGIN_BUILD)/frp_clap_stress $(PLUGIN_BUILD)/bundles/Frodhes.clap \
+	  --minutes $(STRESS_MIN) --instances 3
+
+plugin-hosts: plugin       ## macOS: the VST3 / AU in Apple's AU host and a JUCE host against the CLAP render
+                           ## (tools/plugin_hosts.py; the AU must be installed; pip install pedalboard numpy)
+	$(PY) tools/plugin_hosts.py --bundles $(PLUGIN_BUILD)/bundles --render $(PLUGIN_BUILD)/frp_clap_render \
+	  --au ~/Library/Audio/Plug-Ins/Components/Frodhes.component
+
+# ---- the Akai MPC port (docs/MPC.md): the desktop plugin's engine as an MPC plugin (VST 2.4, arm32 + arm64), built
+# with the MPC Plugin SDK's toolchain (zig; the SDK fetched into .local/mpc-sdk on first use). Nothing is installed.
+MPC_J ?= 2
+.PHONY: mpc test-mpc
+mpc:                       ## build/mpc: the plugin folder (both ARM builds, validated), frodhes-mpc.zip, the native test build
+	nice -n 15 $(PY) mpc/build.py --target all --tools -j$(MPC_J)
+
+test-mpc: mpc plugin       ## the MPC port's tests: the 24-voice build for the comparisons, then tests/py/test_mpc.py (the host
+                           ## simulator, engines, programs, state, tempo, bit-exactness, a soak segment, ARM in Docker)
+	nice -n 15 $(PY) mpc/build.py --target native --voices 24 --out build/mpc24 -j$(MPC_J)
+	$(PY) -m pytest -q tests/py/test_mpc.py tests/py/test_mpc_skin.py

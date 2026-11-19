@@ -1,0 +1,18 @@
+# The automatic settings save goes while a computer reads the USB audio, as without a stream (frodhes.c): the HAL
+# splits the flash erase / program into slices of ~0.5 ms with the interrupts off (fm1_flash.h fl_split_op), so the
+# stream is not disturbed and no recording rule holds the save back. 2 s after the last setup change (here USB VOL,
+# CC 114; a sound change saves nothing: tests/scripts/autosave_setup.txt), once silent.
+50 usbrec 1
+100 midi 0xB0 114 127
+# not before 2 s
+1900 expect state dirty 1
+# 2 s after the change and silent: saved, the stream still on
+2600 expect state dirty 0
+# again while recording: a change, then a note (the save waits for its silence), then a few seconds of quiet
+4000 midi 0xB0 114 0
+4100 midi 0x90 60 100
+6500 expect state dirty 1
+6500 midi 0x80 60 0
+12000 expect state dirty 0
+12100 usbrec 0
+12200 end

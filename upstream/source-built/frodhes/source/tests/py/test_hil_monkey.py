@@ -1,0 +1,248 @@
+# SPDX-License-Identifier: GPL-3.0-only
+"""tools/hil_monkey.py without the FM-1: the plan (--dry-run), the stream's filter (MIDI only, no developer CC), and
+the audio gates on host renders of its takes (the stream, the panic, the probe as the FM-1 gets them): clean takes
+pass; injected faults (an underrun's held frames, a block played twice, a dead probe, a short recording, full
+scale) fail their own row; at 48 kHz full scale fails from 0.9.7 (usb.c's knee); before it (--old-48k) the resampler's overshoot (#38's
+fail-1022) is information and an audible clamp (a run, a spike) still fails. About 15 s."""
+import os
+import sys
+
+import numpy as np
+import pytest
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "tools"))
+import hil_crackle as hc  # noqa: E402
+import hil_monkey as hm  # noqa: E402
+
+
+def test_dry_run_plans_and_checks_every_message(capsys):
+    import mido  # noqa: F401                           # (the dry run checks every message with mido; CI installs it)
+    assert hm.main(["--dry-run", "--minutes", "1"]) == 0
+    out = capsys.readouterr().out
+    assert "every message valid" in out and "no MIDI or audio opened" in out
+
+
+def test_the_stream_is_midi_only_without_developer_ccs():
+    assert hm.midi_of("turn 1 3") is None and hm.midi_of("btn 2") is None and hm.midi_of("keys 5") is None
+    assert hm.midi_of("midi 0xB0 116 127") is None and hm.midi_of("midi 0xB3 119 127") is None
+    assert hm.midi_of("midi 0xF0 1 2") is None
+    assert hm.midi_of("midi 0xC2 7 0") == [0xC2, 7] and hm.midi_of("midi 0xF8 0 0") == [0xF8]
+    seg = hm.segment(1000)
+    assert seg == hm.segment(1000) and all(0 <= t <= hm.SEG_S for t, _ in seg)
+    assert not [b for _, b in seg if b[0] >> 4 == 0xB and b[1] in hm.DEV_CC]
+    assert any(b[0] >> 4 == 0x9 for _, b in seg) and any(b[0] == 0xF8 for _, b in seg)
+
+
+@pytest.fixture(scope="module")
+def take():
+    hm.monkey.build()
+    return hm.host_take(1000, lead_ms=int(1000 * hm.LEAD_S))          # (as the device run cuts its takes)
+
+
+def _status(rows, check):
+    return [r[3] for r in rows if r[0].startswith(check)][0]
+
+
+def test_a_clean_take_passes(take):
+    xi, ev = take
+    rows = hm.judge_audio(xi, 44100, ev)
+    assert not [r for r in rows if r[3] == "FAIL"], rows
+
+
+@pytest.mark.parametrize("kind", ["hold", "block256"])
+def test_an_injected_usb_glitch_fails(take, kind):
+    xi, ev = take
+    u, _, marks = hc.inject(kind, xi, None, ev, np.random.default_rng(3), k=3)
+    rows = hm.judge_audio(np.round(u).astype(np.int64), 44100, ev)
+    assert _status(rows, "USB repeat / stale") == "FAIL"
+
+
+def test_a_dead_probe_fails(take):
+    xi, ev = take
+    x = xi.copy()
+    x[int((hm.SEG_S + hm.PROBE_AT) * 44100):] = 0
+    assert _status(hm.judge_audio(x, 44100, ev), "the probe note") == "FAIL"
+
+
+def test_a_stream_that_stopped_fails(take):
+    xi, ev = take
+    assert _status(hm.judge_audio(xi[:len(xi) // 2], 44100, ev), "frames recorded") == "FAIL"
+
+
+def test_full_scale_fails(take):
+    xi, ev = take
+    x = xi.copy()
+    x[44100 * 5, 0] = 32767
+    assert _status(hm.judge_audio(x, 44100, ev), "USB at full scale") == "FAIL"
+
+
+# fail-1022 (#38): 48 kHz, L at 14.9627 s and its neighbours, a 6-12 kHz burst the limiter kept at 24000 that
+# usb.c's resampler overshot to full scale (the one clamped sample: -32768)
+F1022 = [-24398, -23680, 9181, 20179, 19925, -8837, -32768, -596, 22072, 22175, 10616, -27963, -19568]
+
+
+def _burst(rate, n=4800, at=2400):
+    """a quiet take (-40 dBFS) with fail-1022's burst: 2 ms of a 9 kHz tone at 26000, its peak sample clamped"""
+    t = np.arange(n) / rate
+    x = np.round(100 * np.sin(2 * np.pi * 440 * t)).astype(np.int64)
+    w = slice(at - rate // 1000, at + rate // 1000)
+    x[w] = np.round(26000 * np.sin(2 * np.pi * 9000 * t[w])).astype(np.int64)
+    x[at - 6:at + 7] = F1022
+    return np.stack([x, x], axis=1)
+
+
+def test_the_resamplers_overshoot_is_information_at_48k_before_097():
+    rows = hm.clamp_rows(_burst(48000), 48000, strict48=False)
+    assert _status(rows, "USB at full scale") == "info" and not [r for r in rows if r[3] == "FAIL"], rows
+
+
+def test_full_scale_fails_at_48k_from_097():
+    """usb.c's knee (#38b): fail-1022's clamped sample is a FAIL now (the default, STRICT48)"""
+    rows = hm.clamp_rows(_burst(48000), 48000)
+    assert hm.STRICT48 and _status(rows, "USB at full scale") == "FAIL"
+    x = _burst(48000)
+    x[x == -32768] = -32000
+    assert _status(hm.clamp_rows(x, 48000), "USB at full scale") == "ok"
+
+
+def test_the_same_clamp_fails_at_44k1():
+    assert _status(hm.clamp_rows(_burst(44100), 44100), "USB at full scale") == "FAIL"
+
+
+def test_a_spike_fails_at_48k():
+    x = _burst(48000)
+    x[4000, 0] = 32767                                    # in the quiet: no loud passage around it
+    rows = hm.clamp_rows(x, 48000)
+    assert _status(rows, "USB isolated clamps") == "FAIL" and _status(rows, "USB clamped run") == "ok"
+
+
+def test_an_overload_fails_at_48k():
+    t = np.arange(4800) / 48000
+    x = np.clip(np.round(60000 * np.sin(2 * np.pi * 1000 * t)), -32768, 32767).astype(np.int64)
+    rows = hm.clamp_rows(np.stack([x, x], axis=1), 48000)
+    assert _status(rows, "USB clamped run") == "FAIL" and _status(rows, "USB clamped frames in 10 ms") == "FAIL"
+
+
+def test_a_clamp_now_and_then_in_a_loud_high_passage_fails_when_dense():
+    t = np.arange(4800) / 48000
+    x = np.round(26000 * np.sin(2 * np.pi * 9000 * t)).astype(np.int64)
+    x[::48] = 32767                                       # 10 per 10 ms, each alone
+    rows = hm.clamp_rows(np.stack([x, x], axis=1), 48000)
+    assert _status(rows, "USB clamped frames in 10 ms") == "FAIL" and _status(rows, "USB clamped run") == "ok"
+
+
+def test_rejudge_reads_a_saved_take(take, tmp_path, capsys):
+    xi, ev = take
+    p = tmp_path / "fail-1000.npz"
+    np.savez_compressed(p, usb=xi.astype(np.int16), fs=44100, events=hm.json.dumps(ev), counters="{}", lead=hm.LEAD_S)
+    assert hm.main(["--rejudge", str(p)]) == 0
+    assert "fail-1000.npz: ok" in capsys.readouterr().out
+
+
+def test_a_passing_take_with_silent_note_ons_is_saved_and_rejudged(take1012, take, tmp_path, capsys):
+    """s1024 end to end on a fake take (seed 1012's host render, its first note-on silenced as on the FM-1): it passes,
+    judge_audio counts the silent note-on, save_take keeps it as silent-1012.npz and --rejudge reads it back"""
+    x, ev = take1012
+    rows = hm.judge_audio(x, 44100, ev)
+    bad = [r for r in rows if r[3] == "FAIL"]
+    assert not bad, rows
+    p = hm.save_take(str(tmp_path), 1012, rows, bad, x, 44100, ev, {"underruns": 0})
+    assert p == str(tmp_path / "silent-1012.npz") and os.path.exists(p)
+    z = np.load(p)
+    assert int(z["fs"]) == 44100 and np.array_equal(z["usb"], x.astype(np.int16))
+    assert hm.json.loads(str(z["counters"])) == {"underruns": 0}
+    assert hm.main(["--rejudge", p]) == 0
+    assert "silent-1012.npz: ok" in capsys.readouterr().out
+    xi, ev0 = take                                                    # (a clean take: nothing kept)
+    clean = hm.judge_audio(xi, 44100, ev0)
+    assert hm.save_take(str(tmp_path), 1000, clean, [], xi, 44100, ev0, {}) is None
+    assert sorted(os.listdir(tmp_path)) == ["silent-1012.npz"]
+
+
+@pytest.fixture(scope="module")
+def take1012():
+    hm.monkey.build()
+    xi, ev = hm.host_take(1012, lead_ms=int(1000 * hm.LEAD_S))
+    x = xi.copy()
+    x[:int((hm.LEAD_S + 0.75) * 44100)] = 0     # the FM-1's take (2026-10-26): the first note-on (0.05 s) silent,
+    return x, ev                                # the first sound the second's (0.756 s)
+
+
+def test_a_silent_first_note_does_not_move_the_probe(take1012):
+    x, ev = take1012
+    rows = hm.judge_audio(x, 44100, ev)
+    assert _status(rows, "the probe note") == "ok", rows
+    assert [r[1] for r in rows if r[0].startswith("note-ons silent")] == [1]
+    assert not [r for r in rows if r[3] == "FAIL"], rows
+
+
+def test_a_dead_probe_after_a_silent_first_note_fails(take1012):
+    x, ev = take1012
+    x = x.copy()
+    x[int((hm.SEG_S + hm.PROBE_AT) * 44100):] = 0
+    assert _status(hm.judge_audio(x, 44100, ev), "the probe note") == "FAIL"
+
+
+def test_a_clean_take_keeps_its_fit(take):
+    xi, ev = take
+    assert not [r for r in hm.judge_audio(xi, 44100, ev) if r[0].startswith("note-ons silent")]
+
+
+def test_a_take_with_silent_note_ons_is_kept():
+    """s1024 (fm096g-monkey: seed 1024 passed with 6 note-ons silent and its audio was gone): such a take is saved as
+    silent-<seed>.npz, a failing one as fail-<seed>.npz, a clean one not at all"""
+    ok = [("USB underruns", 0, "0", "ok")]
+    silent = ok + [("note-ons silent before the first sound", 6, "information", "info")]
+    fail = [("USB underruns", 3, "0", "FAIL")]
+    assert hm.saved_name(1024, silent, []) == "silent-1024.npz"
+    assert hm.saved_name(1022, fail + silent, fail) == "fail-1022.npz"
+    assert hm.saved_name(1000, ok, []) is None
+
+
+# ---- the triage of a failing take (0.9.7): the host build on the same seed, in the same run -----------------------
+def _planted(take):
+    xi, ev = take
+    u, _, marks = hc.inject("hold", xi, None, ev, np.random.default_rng(3), k=3)
+    u = np.round(u).astype(np.int64)
+    rows = hm.judge_audio(u, 44100, ev)
+    assert _status(rows, "USB repeat / stale") == "FAIL"
+    return u, ev, rows
+
+
+ZERO = {"usb": dict(underruns=0, missed=0, overruns=0, stalls=0, sie_to=0)}
+
+
+def test_triage_a_device_only_copy(take, tmp_path):
+    u, ev, rows = _planted(take)
+    r = hm.triage(1000, rows, u, 44100, ev, ZERO, out=str(tmp_path), render=lambda s, lead_ms: take, load="1.5 / 1.7")
+    assert r[0].startswith("triage") and r[3] == "info"
+    assert r[1].startswith("DEVICE ONLY (USB repeat / stale"), r[1]
+    assert "repeat" in r[1] and "equal frames" in r[1] and "dB" in r[1] and "underruns 0" in r[1], r[1]
+    assert "stereo" in r[1] or "mono" in r[1]
+    assert "host load 1.5 / 1.7" in r[1]
+    z = np.load(tmp_path / "host-1000.npz")
+    assert len(z["usb"]) == len(take[0]) and int(z["fs"]) == 44100
+
+
+def test_triage_host_too(take):
+    u, ev, rows = _planted(take)
+    r = hm.triage(1000, rows, u, 44100, ev, ZERO, render=lambda s, lead_ms: (u, ev))
+    assert r[1].startswith("HOST TOO -> test/music, not the device"), r[1]
+
+
+def test_triage_counted(take):
+    u, ev, rows = _planted(take)
+    cnt = {"usb": dict(ZERO["usb"], underruns=2)}
+    r = hm.triage(1000, rows, u, 44100, ev, cnt, render=lambda s, lead_ms: take)
+    assert r[1].startswith("COUNTED (USB repeat / stale") and "underruns 2" in r[1], r[1]
+
+
+def test_no_triage_without_an_audio_failure(take):
+    xi, ev = take
+    rows = [("USB underruns", 3, "0", "FAIL")] + hm.judge_audio(xi, 44100, ev)
+    assert hm.triage(1000, rows, xi, 44100, ev, ZERO, render=lambda s, lead_ms: take) is None
+
+
+def test_host_load_is_a_number():
+    v = hm.host_load()
+    assert v is None or v >= 0

@@ -1,0 +1,67 @@
+{
+  "repo": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1.git",
+  "commit": "866abfa25325d8dffedf262af5a25e52dc47d8c9",
+  "scope": "Upstream full-firmware credit context; actual DSP inclusion must be distinguished from UI/hardware/measurement references",
+  "documents": [
+    {
+      "path": "LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/LICENSE"
+    },
+    {
+      "path": "LICENSING.md",
+      "sha256": "8d4351f45d416f8a6e7a2d3492e71695af6871c8d081137efa8f12f0c67fc406",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/LICENSING.md"
+    },
+    {
+      "path": "README.md",
+      "sha256": "71be423071f042b15cd3462dc5420b09aec9a6b2d40c3462d2fe8dabd4ad170a",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/README.md"
+    },
+    {
+      "path": "source/LICENSES/Apache-2.0-msfa.txt",
+      "sha256": "27dd23b62bc11d0806562397a1e782f86fc7dcacd1ba7a1b58d3c78a54795e62",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/LICENSES/Apache-2.0-msfa.txt"
+    },
+    {
+      "path": "source/assets/fonts/AtkinsonHyperlegibleMono-LICENSE.txt",
+      "sha256": "1ebb31cf7393164f20d10c1d48406cddb5314feff8465531cf1e4ba37e9dd740",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/assets/fonts/AtkinsonHyperlegibleMono-LICENSE.txt"
+    },
+    {
+      "path": "source/assets/fonts/BigShoulders-LICENSE.txt",
+      "sha256": "9ce6294be745093338c51e62d7efaddbf32b90ac9a7ffde8a12ce92e0413fe25",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/assets/fonts/BigShoulders-LICENSE.txt"
+    },
+    {
+      "path": "source/assets/fonts/IBMPlexMono-LICENSE.txt",
+      "sha256": "7e6b2818edbd8f6a01ae80641cc8f16a51080d08fb4e532be3a0b6f74adb07da",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/assets/fonts/IBMPlexMono-LICENSE.txt"
+    },
+    {
+      "path": "source/assets/fonts/InstrumentSans-LICENSE.txt",
+      "sha256": "6c98bea402c5bfed70c42c0d6fcc6a31ea793979537d1becf4a5dae65a26a34f",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/assets/fonts/InstrumentSans-LICENSE.txt"
+    },
+    {
+      "path": "source/assets/fonts/JetBrainsMono-LICENSE.txt",
+      "sha256": "4d9694c4844a13ea377458c3f98c90d2bf83d3c214612dcae2b7808406520708",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/assets/fonts/JetBrainsMono-LICENSE.txt"
+    },
+    {
+      "path": "source/assets/fonts/Outfit-LICENSE.txt",
+      "sha256": "8fc6af31312082959cc8297b30e04d94ff457faecc9fb0aeeb8906bf448f20e6",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/assets/fonts/Outfit-LICENSE.txt"
+    },
+    {
+      "path": "source/assets/fonts/PressStart2P-LICENSE.txt",
+      "sha256": "705960c3281a5765ecc0b59bd4ed7ca59eed165748076bc2fc3e8fdbfeb944b0",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/assets/fonts/PressStart2P-LICENSE.txt"
+    },
+    {
+      "path": "source/assets/fonts/Tektur-LICENSE.txt",
+      "sha256": "360ef927fe156e4c7d8d7b1900375594f7db95fc3e04c1f0ce8cbbc55bc76eb8",
+      "source_url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1/blob/866abfa25325d8dffedf262af5a25e52dc47d8c9/source/assets/fonts/Tektur-LICENSE.txt"
+    }
+  ]
+}

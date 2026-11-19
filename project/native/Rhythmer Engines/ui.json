@@ -1,0 +1,181 @@
+{
+  "kit": {
+    "theme": "mono",
+    "accent": "ffffffff"
+  },
+  "style": {
+    "background": "ff000000",
+    "accent": "ffffffff",
+    "text": "ffffffff",
+    "muted": "ffffffff"
+  },
+  "pages": [
+    {
+      "name": "PLAY",
+      "controls": [
+        {
+          "param": "Engine",
+          "widget": "slider",
+          "overlay": "menu"
+        },
+        {
+          "param": "Preset",
+          "widget": "slider",
+          "overlay": "menu"
+        },
+        {
+          "param": "Pad",
+          "widget": "slider",
+          "overlay": "menu"
+        },
+        {
+          "param": "Level",
+          "widget": "fader"
+        },
+        {
+          "param": "Control 1",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 2",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 3",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 4",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 5",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 6",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 7",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 8",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "EDIT",
+      "controls": [
+        {
+          "param": "Section",
+          "widget": "switch"
+        },
+        {
+          "param": "Detail Page",
+          "widget": "slider"
+        },
+        {
+          "param": "Pad",
+          "widget": "slider",
+          "overlay": "menu"
+        },
+        {
+          "param": "Level",
+          "widget": "fader"
+        },
+        {
+          "param": "Control 9",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 10",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 11",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 12",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 13",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 14",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 15",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 16",
+          "widget": "knob"
+        }
+      ]
+    },
+    {
+      "name": "KIT",
+      "controls": [
+        {
+          "param": "Kit Preset",
+          "widget": "slider",
+          "overlay": "menu"
+        },
+        {
+          "param": "Pad",
+          "widget": "slider",
+          "overlay": "menu"
+        },
+        {
+          "param": "Pad Engine",
+          "widget": "slider",
+          "overlay": "menu"
+        },
+        {
+          "param": "Pad Sound",
+          "widget": "slider",
+          "overlay": "menu"
+        },
+        {
+          "param": "Control 1",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 2",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 3",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 4",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 5",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 6",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 7",
+          "widget": "knob"
+        },
+        {
+          "param": "Control 8",
+          "widget": "knob"
+        }
+      ]
+    }
+  ]
+}

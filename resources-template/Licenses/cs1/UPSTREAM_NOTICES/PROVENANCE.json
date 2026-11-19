@@ -1,0 +1,27 @@
+{
+  "repo": "https://github.com/twochannels/CS-1.git",
+  "commit": "5dce8fadd3aa86cf47a3290289ee1c10b7c102e4",
+  "scope": "Upstream full-firmware credit context; actual DSP inclusion must be distinguished from UI/hardware/measurement references",
+  "documents": [
+    {
+      "path": "LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/twochannels/CS-1/blob/5dce8fadd3aa86cf47a3290289ee1c10b7c102e4/LICENSE"
+    },
+    {
+      "path": "LICENSING.md",
+      "sha256": "1690dc46385cf081d985a63291ab042f9f97df2e835e834d19f723fd80d7b440",
+      "source_url": "https://github.com/twochannels/CS-1/blob/5dce8fadd3aa86cf47a3290289ee1c10b7c102e4/LICENSING.md"
+    },
+    {
+      "path": "README.md",
+      "sha256": "8c2f152b049740428acfb53669d3e4f8703e13fb52dffa07c83942751f158977",
+      "source_url": "https://github.com/twochannels/CS-1/blob/5dce8fadd3aa86cf47a3290289ee1c10b7c102e4/README.md"
+    },
+    {
+      "path": "assets/fonts/Terminus-LICENSE.txt",
+      "sha256": "0a18785a674c0061da0fa1eb1bbdfe2d7db383b3f2e64c73454540e9cc3ae33d",
+      "source_url": "https://github.com/twochannels/CS-1/blob/5dce8fadd3aa86cf47a3290289ee1c10b7c102e4/assets/fonts/Terminus-LICENSE.txt"
+    }
+  ]
+}

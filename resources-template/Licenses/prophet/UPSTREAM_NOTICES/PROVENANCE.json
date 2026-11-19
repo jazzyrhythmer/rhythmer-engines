@@ -1,0 +1,82 @@
+{
+  "repo": "https://github.com/keremimo/melodee.git",
+  "commit": "165d177a425944f3d30b0b669255a6ed0050c3a5",
+  "scope": "Upstream full-firmware credit context; actual DSP inclusion must be distinguished from UI/hardware/measurement references",
+  "documents": [
+    {
+      "path": "LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSE"
+    },
+    {
+      "path": "LICENSES/Apache-2.0-msfa.txt",
+      "sha256": "27dd23b62bc11d0806562397a1e782f86fc7dcacd1ba7a1b58d3c78a54795e62",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/Apache-2.0-msfa.txt"
+    },
+    {
+      "path": "LICENSES/Apache-2.0.txt",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/Apache-2.0.txt"
+    },
+    {
+      "path": "LICENSES/BSD-3-Clause-uPD933.txt",
+      "sha256": "57747baee9c753ad902ebfcd95a50b131b6d3cc967045d87b69169c807bcde4a",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/BSD-3-Clause-uPD933.txt"
+    },
+    {
+      "path": "LICENSES/MIT-DaisySP.txt",
+      "sha256": "7fa755aede5b5c2a8131a6db692f5818ed8d21dcbe632f41618af03b6d698126",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/MIT-DaisySP.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Fukiai.txt",
+      "sha256": "fddeab17d69ab85a8e9c593beb0e93c279a9d74ff9504e1804bba123cb63e08e",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/MIT-Fukiai.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Rings.txt",
+      "sha256": "60cd097bf74b2a3a0cadadeddec5d80b6806f83039e6ce9cb0ba511a1f17a2be",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/MIT-Rings.txt"
+    },
+    {
+      "path": "LICENSES/MIT-m-bootloader.txt",
+      "sha256": "6657fd9d14b94d7dbecc5a08d17453890a38d57f20916c3812d062073c3b28b5",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/MIT-m-bootloader.txt"
+    },
+    {
+      "path": "LICENSES/MPL-2.0.txt",
+      "sha256": "1f256ecad192880510e84ad60474eab7589218784b9a50bc7ceee34c2b91f1d5",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/MPL-2.0.txt"
+    },
+    {
+      "path": "LICENSES/OFL-InterTight.txt",
+      "sha256": "50240ab035cf1b6b3307940235481d515c4b6de3ab1fa843dbe59e7892cb9d58",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/OFL-InterTight.txt"
+    },
+    {
+      "path": "LICENSES/OFL-Rubik.txt",
+      "sha256": "472cbe7c25441df63e9c7864b43eb3c0f4b3df950c66a76224e6cfe1eae843fb",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSES/OFL-Rubik.txt"
+    },
+    {
+      "path": "LICENSING.md",
+      "sha256": "02e1abe387f5c5c2de7f51da9d1a64bda9d8448f6942713c39f5f51261ea2b1e",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/LICENSING.md"
+    },
+    {
+      "path": "README.md",
+      "sha256": "66a790b0e0af02c3a78ee0a1007f53dc762fdc1fa46bf959675131c914e596fc",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/README.md"
+    },
+    {
+      "path": "web/FUKIAI-LICENSE.txt",
+      "sha256": "4b210cc1923155209fa8fba5e1e9d2587e9a10a5c78d80d841e69d3df216cffe",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/web/FUKIAI-LICENSE.txt"
+    },
+    {
+      "path": "web/m-bootloader/LICENSE",
+      "sha256": "6657fd9d14b94d7dbecc5a08d17453890a38d57f20916c3812d062073c3b28b5",
+      "source_url": "https://github.com/keremimo/melodee/blob/165d177a425944f3d30b0b669255a6ed0050c3a5/web/m-bootloader/LICENSE"
+    }
+  ]
+}

@@ -1,0 +1,421 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Elixir: MIDI. In: USB and the TRS jack (usb.c, midi_uart.c fill midi_in_q), handled in the audio ISR at a
+ * block start. Out: USB (the FM-1 has no MIDI out jack): the sequencer's notes, MIDI clock, start / stop and
+ * program changes. As the LXR (Core/Src/Soundengine/MIDI/MidiParser.c, sequencer.c; Copyright (C) 2012-2026
+ * Erica Synths, GPL-3.0-only):
+ *   - each track has a channel (MIDI page) and a note: ANY plays the voice at the received note, a note plays it
+ *     (at the default pitch) on that note only; the global channel plays the selected track;
+ *   - CC n sets parameter n - 1 (the LXR's CC map), NRPN n (CC 99 / 98, data entry CC 6) parameter n + 128 (Elixir's
+ *     own after the LXR's: NRPN 174..189, sound.c), CC 0 loads a kit; the channel: the parameter's voice's, the
+ *     global one, or (no voice) any of them; Out = FX BUS (the LXR's) sets the voice's FX SEND to 127;
+ *   - program change 0..31 on the global channel queues a pattern;
+ *   - MIDI clock / start / continue / stop drive the sequencer when BPM is MIDI;
+ *   - the filters (RX / TX: N notes, R realtime, C CC, P program change) and the soft thru (TRS in -> USB out:
+ *     M2U, M2A; the LXR's routes to its DIN out have no jack here);
+ *   - 0.12: the remote channels (CONFIG: REMOTE; 0.16: two, TRACKS and GLOBAL): their CCs and notes go to the
+ *     remote map (remote.c, the main loop) and nowhere else, past the filters; the remote's feedback goes out from
+ *     here.
+ *   - 0.24: the CC map (the library page writes it; project.c keeps it in the settings): a CC can set another
+ *     parameter (any the CCs and NRPNs reach) or nothing. Its channel is then the new parameter's voice's (or the
+ *     global one); a short-range parameter (a list, 0..15) is stretched over 0..127. CC 6, 98 and 99 stay NRPN's.
+ *   - 0.24: what the global channel takes (CONFIG: MIDI CHANNELS, Global in; kset.gtakes):
+ *       KEYS (the default): program change 0..31 the pattern, CC 102 a slot kit (0..63), CC 103 a factory kit
+ *         (0..84, into the edit buffer as LOAD > FACTORY), notes play the selected track, CC 1 (the mod wheel) moves
+ *         MACRO 1; the rest a keyboard sends (bank select, pitch bend, sustain ..) is nothing;
+ *       PAT+KIT: the same without the notes and the wheel (a launch lane);
+ *       ALL: the LXR's (notes, every CC, NRPN, CC 0 the kit); OFF: nothing.
+ *     The track channels and the remote's are as before (CC 0 a slot kit there, as the LXR's).
+ *   - 0.24.2: the basics on the remote's two channels too (TRACKS' and GLOBAL's, 15 and 16 by default), so one
+ *     channel does it all: program change 0..31 the pattern, CC 126 a slot kit (0..63), CC 127 a factory kit (the
+ *     remote map leaves 120..127 free). Global in KEYS and PAT+KIT take CC 126 / 127 as CC 102 / 103.
+ *   - 1.0: on the same channels, CC 125 a slot kit (0..63) as the morph target (LOAD > MORPH) and CC 124 the master
+ *     volume (CONFIG's settings, out_vol: 127 the most); a track's notes go out only if CONFIG: MIDI OUT has it on
+ *     (midi_mout, all off by default) and TX has N. */
+
+enum { MF_NOTE = 1, MF_RT = 2, MF_CC = 4, MF_PC = 8 };
+enum { MR_OFF, MR_U2M, MR_M2M, MR_A2M, MR_M2U, MR_M2A };
+
+static uint8_t midi_mout;                           /* 1.0: the tracks whose notes go out (project.c: kset.mout) */
+static volatile uint8_t out_vol = 127;              /* 1.0: the master volume 0..127 (engine.c; kset.mvol) */
+static uint8_t midi_note_on_of[NTRACK];             /* the note a track's MIDI out is holding, 0 = none */
+static uint8_t midi_note_mask;
+static uint16_t nrpn_num;
+static volatile uint8_t midi_seen;                  /* MIDI arrived (the UI's indicator) */
+static volatile uint16_t midi_cc_par;               /* the last parameter MIDI changed + 1 (the UI shows it) */
+/* 1.0 Phase 17: Control All by MIDI (remote.c: GLOBAL's button 62 held, bit 0; 63 latched, bit 1; the main loop
+ * writes it). While on, a voice's parameter from a CC or an NRPN goes to the main loop (ui.c ca_take: every track in
+ * Control All by its step), not into the edit buffer here */
+static volatile uint8_t ca_rm;
+#define CAQ 16u
+static volatile uint32_t ca_q[CAQ];                 /* p | v << 16 */
+static volatile uint8_t ca_qw, ca_qr;
+
+/* 0.12: the remote: its channels (0..15, 0xFF off; the settings set them; 0.16: TRACKS' and GLOBAL's), what came in
+ * on them for the main loop (remote.c), what the main loop sends back (its feedback) */
+#define RQ 64u
+static volatile uint8_t remote_ch = 14u, remote_gch = 15u;
+static volatile uint32_t rin_q[RQ], rout_q[RQ];
+static volatile uint8_t rin_w, rin_r, rout_w, rout_r;
+static void remote_in_post(uint32_t pkt)             /* (the audio ISR) */
+{
+    if ((uint8_t)(rin_w - rin_r) >= RQ)
+        return;
+    rin_q[rin_w % RQ] = pkt;
+    RING_PUBLISH();
+    rin_w++;
+}
+static int remote_out_post(uint32_t st, uint32_t d1, uint32_t d2)   /* (the main loop) 0: the queue is full */
+{
+    if ((uint8_t)(rout_w - rout_r) >= RQ)
+        return 0;
+    rout_q[rout_w % RQ] = (st >> 4) | st << 8 | (d1 & 127u) << 16 | (d2 & 127u) << 24;
+    RING_PUBLISH();
+    rout_w++;
+    return 1;
+}
+
+/* channels: the settings hold 1..16 (DTYPE_1B16) */
+static uint32_t midi_track_ch(uint32_t t)
+{
+    return ((t < 6u ? par[PAR_MIDI_CHAN_1 + t] : par[PAR_MIDI_CHAN_7]) - 1u) & 15u;
+}
+static uint32_t midi_global_ch(void) { return (par[PAR_MIDI_CHAN_GLOBAL] - 1u) & 15u; }
+
+/* ---------------------------------------------------------------- out --- */
+static void midi_send(uint32_t st, uint32_t d1, uint32_t d2)
+{
+    uint32_t cin = st >= 0xF0u ? 0xFu : st >> 4;
+    midi_out_event(cin | st << 8 | (d1 & 127u) << 16 | (d2 & 127u) << 24);
+}
+static int midi_tx(uint32_t f) { return (par[PAR_MIDI_FILT_TX] & f) != 0u; }
+
+static void midi_out_note(uint32_t t, uint32_t note, uint32_t vel)   /* seq_sendMidiNoteOn */
+{
+    uint32_t n = par[PAR_MIDI_NOTE1 + t] ? par[PAR_MIDI_NOTE1 + t] : note;
+    if (!midi_tx(MF_NOTE) || t >= NTRACK || !vel || !((midi_mout >> t) & 1u))
+        return;
+    midi_send(0x90u | midi_track_ch(t), n, vel);
+    midi_note_on_of[t] = (uint8_t)n;
+    midi_note_mask |= (uint8_t)(1u << t);
+}
+static void midi_out_legato(uint32_t t, uint32_t note, uint32_t vel)   /* 19b: a tied note's next: on, then the old off */
+{
+    uint32_t old = midi_note_on_of[t], held = (midi_note_mask >> t) & 1u;
+    midi_out_note(t, note, vel);
+    if (held && midi_note_on_of[t] != old)
+        midi_send(0x80u | midi_track_ch(t), old, 0);
+}
+static void midi_out_note_off(uint32_t t)            /* seq_midiNoteOff (sent even if TX N went off meanwhile) */
+{
+    if (t >= NTRACK || !(midi_note_mask & (1u << t)))
+        return;
+    midi_note_mask &= (uint8_t)~(1u << t);
+    midi_send(0x80u | midi_track_ch(t), midi_note_on_of[t], 0);
+}
+static void midi_out_rt(uint32_t st)
+{
+    if (midi_tx(MF_RT))
+        midi_send(st, 0, 0);
+}
+static void midi_out_pc(uint32_t pattern)
+{
+    if (midi_tx(MF_PC))
+        midi_send(0xC0u | midi_global_ch(), pattern, 0);
+}
+
+/* ----------------------------------------------------------------- in --- */
+#define CCMAP_OFF 0xFFFFu
+enum { GT_KEYS, GT_PATKIT, GT_ALL, GT_OFF, NGTAKES };
+#define GTM_PC ((1u << GT_KEYS) | (1u << GT_PATKIT) | (1u << GT_ALL))   /* what each message needs */
+#define GTM_NOTE ((1u << GT_KEYS) | (1u << GT_ALL))
+#define GTM_ALL (1u << GT_ALL)
+#define GT_CC_SLOT 102u                              /* (undefined in the MIDI spec: a keyboard doesn't send them) */
+#define GT_CC_FACTORY 103u
+#define AK_CC_SLOT 126u                              /* 0.24.2: the same on every channel (the remote's free CCs) */
+#define AK_CC_FACTORY 127u
+#define AK_CC_VOL 124u                               /* 1.0: the master volume */
+#define AK_CC_MORPH 125u                             /* 1.0: a slot kit as the morph target */
+static int midi_ak_cc(uint32_t cc) { return cc >= AK_CC_VOL; }   /* (124 .. 127: on every channel that takes them) */
+/* a slot kit (CC 102 / 126) or a factory one (CC 103 / 127); 1.0: the morph target (CC 125), the volume (CC 124) */
+static void midi_kit_cc(uint32_t cc, uint32_t v)
+{
+    if (cc == AK_CC_VOL) {
+        out_vol = (uint8_t)v;
+    } else if (cc == AK_CC_MORPH) {
+        if (v < NUM_KITS)
+            kit_load_morph(v);
+    } else if (cc == GT_CC_SLOT || cc == AK_CC_SLOT) {
+        if (v < NUM_KITS)
+            kit_load_ram(v);
+    } else {
+        kit_factory_load(v);
+    }
+}
+static uint8_t midi_gtakes;                          /* (project.c sets it from kset.gtakes) */
+static volatile uint8_t midi_modw = 0xFF;            /* KEYS: the wheel for MACRO 1 (remote.c, the main loop) */
+static int midi_glob(uint32_t ch, uint32_t mask)     /* the global channel, taking this (GTM_*) */
+{
+    return ch == midi_global_ch() && ((mask >> midi_gtakes) & 1u);
+}
+static uint32_t cc_map_at(uint32_t cc);              /* (project.c) 0: the LXR's, CCMAP_OFF: nothing, else parameter + 1 */
+/* midiParser_cc2voiceNr: the voice (1..6) a CC's parameter belongs to; 0 none, 7 all */
+static uint32_t cc_voice(uint32_t cc)
+{
+    uint32_t p = cc ? cc - 1u : 0u;
+    switch (cc) {
+    case 0: case 1: case 6: case 98: case 99:
+        return 0;
+    case 115:
+        return 7;
+    default:
+        break;
+    }
+    return par_voice(p) + 1u;
+}
+
+static int ui_step_note_edit(uint32_t note);        /* (ui.c) the step page takes a played note */
+
+/* midiParser_noteOn */
+static void midi_note_on(uint32_t t, uint32_t note, uint32_t vel, int rec)
+{
+    if (ui_step_note_edit(note))
+        return;
+    if (seq_mutes() & (1u << t))
+        return;
+    if (par[PAR_MIDI_NOTE1 + t]) {
+        if (note != par[PAR_MIDI_NOTE1 + t])
+            return;
+        note = tb_note(t);
+    }
+    midi_out_note_off(t);
+    voice_trigger(t, vel, note);
+    if (rec) {
+        seq_add_note(t, vel, note);
+        midi_out_note(t, note, vel);
+    }
+}
+
+/* a parameter from MIDI (a CC or an NRPN): the edit buffer and the sound at once, recorded when recording */
+static void midi_param(uint32_t p, uint32_t v)
+{
+    if (p >= NPAR || p == 0u)
+        return;
+    if (p == PAR_NRPN_DATA_ENTRY_COARSE || p == PAR_NRPN_FINE || p == PAR_NRPN_COARSE || p == PAR_BANK_CHANGE)
+        return;
+    if (p == PAR_MORPH) {                            /* 0.12: as the panel sets them (par[] alone did nothing) */
+        kit_set_morph(v * 255u / 127u);
+        return;
+    }
+    if (p == PAR_ROLL) {
+        sq.roll_rate = (uint8_t)(v > 13u ? 13u : v);
+        par[PAR_ROLL] = sq.roll_rate;
+        sq.roll_free = 0;
+        return;
+    }
+    if (ca_rm && par_voice(p) < 6u && par_sound(p) && !(p >= PAR_AUDIO_OUT1 && p <= PAR_AUDIO_OUT6)) {
+        if ((uint8_t)(ca_qw - ca_qr) < CAQ) {        /* (Phase 17: Control All's, the main loop's; no lock recorded) */
+            ca_q[ca_qw % CAQ] = p | v << 16;
+            RING_PUBLISH();
+            ca_qw++;
+        }
+        midi_cc_par = (uint16_t)(p + 1u);
+        return;
+    }
+    par[p] = (uint8_t)v;
+    if (p >= PAR_AUDIO_OUT1 && p <= PAR_AUDIO_OUT6 && v >= 6u) {   /* the LXR's Out = FX BUS: FX SEND 127 */
+        out_migrate(&par[PAR_AUDIO_OUT1], &par[PAR_FX_SEND1]);
+        snd_refresh(PAR_FX_SEND1 + p - PAR_AUDIO_OUT1);
+    }
+    if (p == PAR_FX_TYPE && v == FX_DELAY) {         /* (1.0: the LXR's FX type DELAY: the always-on delay, on) */
+        uint32_t q;
+        dly_migrate(par, par[PAR_DSYNC], &par[PAR_L2TGT1]);
+        for (q = PAR_DLY_TIME; q <= PAR_DLY_WOW; q++)
+            snd_refresh(q);
+    }
+    if (par_sound(p)) {
+        snd_refresh(p);
+        if (par_lockable(p))
+            seq_record_automation(ui_track(), p, v);
+    }
+    midi_cc_par = (uint16_t)(p + 1u);
+}
+
+static void midi_cc(uint32_t ch, uint32_t cc, uint32_t v)
+{
+    uint32_t m = (cc == 6u || cc == 98u || cc == 99u) ? 0u : cc_map_at(cc), p = m - 1u, t, ok = 0;
+    uint32_t vo = m ? par_voice(p) + 1u : cc_voice(cc), gl = (uint32_t)midi_glob(ch, GTM_ALL);
+    if (!(par[PAR_MIDI_FILT_RX] & MF_CC) || m == CCMAP_OFF)
+        return;
+    if (!m && midi_glob(ch, GTM_PC & ~GTM_ALL)) {    /* 0.24: KEYS, PAT+KIT: the global channel's own CCs */
+        if (cc == GT_CC_SLOT || cc == GT_CC_FACTORY || midi_ak_cc(cc)) {
+            midi_kit_cc(cc, v);
+            return;
+        }
+        if (cc == 1u) {
+            if (midi_gtakes == GT_KEYS)
+                midi_modw = (uint8_t)v;
+            return;
+        }
+    }
+    if (vo == 0u || vo >= 7u) {                      /* any channel the LXR listens on */
+        ok = gl;
+        for (t = 0; t < NTRACK; t++)
+            ok |= ch == midi_track_ch(t);
+    } else {
+        ok = ch == midi_track_ch(vo - 1u) || gl;
+    }
+    if (!ok)
+        return;
+    if (m) {                                         /* 0.24: mapped */
+        uint32_t lo = par_min(p), r = par_max(p) - lo;
+        v = r < 127u ? lo + (v * r + 63u) / 127u : v;
+        midi_param(p, is_lfo_sync(p) ? SYNC_ORDER[v % NSYNC] : v);   /* (1.0: the syncs by length, as the knob) */
+        return;
+    }
+    switch (cc) {
+    case 0:                                          /* bank select: the kit */
+        if (v < NUM_KITS)
+            kit_load_ram(v);
+        return;
+    case 1:
+        return;
+    case 6:                                          /* NRPN data entry */
+        midi_param(nrpn_num + 128u, v);
+        return;
+    case 98:
+        nrpn_num = (uint16_t)((nrpn_num & ~0x7Fu) | v);
+        return;
+    case 99:
+        nrpn_num = (uint16_t)((nrpn_num & 0x7Fu) | v << 7);
+        return;
+    default:
+        midi_param(cc - 1u, v);
+        return;
+    }
+}
+
+static void midi_message(uint32_t pkt, uint32_t src)   /* midiParser_parseMidiMessage */
+{
+    uint32_t st = (pkt >> 8) & 0xFFu, d1 = (pkt >> 16) & 0x7Fu, d2 = (pkt >> 24) & 0x7Fu;
+    uint32_t rx = par[PAR_MIDI_FILT_RX], route = par[PAR_MIDI_ROUTING];
+    midi_seen = 1;
+    if (src == 2u && (route == MR_M2U || route == MR_M2A))   /* soft thru: the TRS input to USB */
+        midi_out_event(pkt);
+    if (st < 0xF0u && ((st & 15u) == remote_ch || (st & 15u) == remote_gch)) {
+        if ((st & 0xF0u) == 0xB0u && midi_ak_cc(d1)) {
+            midi_kit_cc(d1, d2);                     /* 0.24.2: the kit, on the remote's channels too (1.0: 124 ..) */
+            return;
+        }
+        if ((st & 0xF0u) == 0xC0u) {                 /* 0.24.2: .. and the pattern */
+            if (rx & MF_PC)
+                seq_set_next_pattern(d1);
+            return;
+        }
+        if ((st & 0xE0u) == 0x80u || (st & 0xF0u) == 0xB0u) {
+            remote_in_post(pkt);                     /* 0.12: the remote's notes and CCs */
+            return;
+        }
+    }
+    if (st >= 0xF8u) {
+        if (!(rx & MF_RT))
+            return;
+        if (st == 0xF8u)
+            seq_ext_pulse();
+        else
+            seq_ext_transport(st);
+        return;
+    }
+    switch (st & 0xF0u) {
+    case 0x90u:
+    case 0x80u: {
+        uint32_t ch = st & 15u, t, q = 0xFFu;
+        if (!(rx & MF_NOTE) || (st & 0xF0u) == 0x80u || d2 == 0u)
+            return;                                  /* (drum voices ignore note off) */
+        if (midi_glob(ch, GTM_NOTE)) {
+            q = ui_track();
+            midi_note_on(q, d1, d2, 1);
+        }
+        for (t = 0; t < NTRACK; t++)
+            if (t != q && midi_track_ch(t) == ch)
+                midi_note_on(t, d1, d2, 1);
+        return;
+    }
+    case 0xC0u:
+        if ((rx & MF_PC) && midi_glob(st & 15u, GTM_PC))
+            seq_set_next_pattern(d1);
+        return;
+    case 0xB0u:
+        midi_cc(st & 15u, d1, d2);
+        return;
+    default:
+        return;
+    }
+}
+
+/* 0.8: the notes the panel plays (KEYS; SHIFT + 1..7 audition), posted by the main loop: the audio ISR plays them at
+ * its next block as a MIDI note in would be (MIDI out, recorded under REC; an audition is not recorded). 19: in the
+ * track's scale (and TRANSPOSE); KEYS' notes hold a GATE voice (KF_HOLD) until the key's release (KF_REL) */
+#define KQ 8u
+#define KF_REC 1u
+#define KF_HOLD 2u
+#define KF_REL 4u
+#define KQ_NOREC (1u << 24)
+#define KQ_HOLD (1u << 25)
+#define KQ_REL (1u << 26)
+static volatile uint32_t key_q[KQ];
+static volatile uint8_t key_w, key_r;
+static void key_note_post(uint32_t t, uint32_t note, uint32_t vel, uint32_t f)
+{
+    if ((uint8_t)(key_w - key_r) >= KQ || t >= NTRACK)
+        return;
+    key_q[key_w % KQ] = t | (note & 127u) << 8 | (vel & 127u) << 16 | (f & KF_REC ? 0u : KQ_NOREC) |
+                        (f & KF_HOLD ? KQ_HOLD : 0u) | (f & KF_REL ? KQ_REL : 0u);
+    RING_PUBLISH();
+    key_w++;
+}
+static void key_service(void)
+{
+    while (key_r != key_w) {
+        uint32_t e = key_q[key_r % KQ], t = e & 7u, note = (e >> 8) & 127u, vel = (e >> 16) & 127u;
+        RING_PUBLISH();
+        key_r++;
+        if (e & KQ_REL) {
+            voice_hold(t, 0);
+            midi_out_note_off(t);
+            continue;
+        }
+        note = scale_fit(t, note, 0);
+        midi_out_note_off(t);
+        voice_trigger(t, vel ? vel : 1u, note);
+        if (e & KQ_HOLD)
+            voice_hold(t, 1);
+        if (!(e & KQ_NOREC))
+            seq_add_note(t, vel ? vel : 1u, note);
+        midi_out_note(t, note, vel ? vel : 1u);
+    }
+}
+
+/* the audio ISR, at a block start: what came in. A broken stream (the ring overflowed): dropped */
+static void midi_service(void)
+{
+    if (midi_in_overflow) {
+        mi_r = mi_w;
+        midi_in_overflow = 0;
+        return;
+    }
+    while (rout_r != rout_w) {                       /* 0.12: the remote's feedback */
+        uint32_t pkt = rout_q[rout_r % RQ];
+        RING_PUBLISH();
+        rout_r++;
+        midi_out_event(pkt);
+    }
+    while (mi_r != mi_w) {
+        uint32_t i = mi_r % MQ, pkt, src;
+        RING_PUBLISH();
+        pkt = midi_in_q[i];
+        src = midi_in_source[i];
+        RING_PUBLISH();
+        mi_r++;
+        midi_message(pkt, src);
+    }
+}

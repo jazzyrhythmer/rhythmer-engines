@@ -1,0 +1,75 @@
+# SMK-37 build only (make test-smk): the wheels (raw readings as the HAL gives them: pitch at rest 535, mod 620).
+# The pitch wheel bends as MIDI pitch bend does ("bend": -8192 .. 8191, the Rhodes +-2 semitones), through an IIR and a
+# hysteresis of one count; at rest it is exactly 0, a wobble of one count moves nothing. The readings count after
+# ~300 scan frames (frodhes_smk.h SMK_SETTLE).
+400 expect state bend 0
+500 keys 0x80
+600 wheel 0 1000
+800 expect state bend 8191
+900 wheel 0 535
+1100 expect state bend 0
+1100 expect state wbend 0
+1200 wheel 0 536
+1300 wheel 0 534
+1400 wheel 0 535
+1500 expect state bend 0
+1600 wheel 0 100
+1800 expect state bend -8192
+1900 wheel 0 535
+2100 expect state bend 0
+2100 expect rms > -40
+2200 keys 0
+2300 wheel 0 770
+2600 wheel 0 535
+2800 expect state bend 0
+# MIDI pitch bend still works, and the wheel at rest does not undo it (it sends only when it moves)
+2900 midi 0xE0 0 96
+3000 expect state bend 4096
+3100 midi 0xE0 0 64
+# the mod wheel (up = a lower reading): more TREM/WAH depth on top of DEPTH, never DEPTH itself (0.9.6, #29: its rest
+# was DEPTH 0, the preset's DEPTH lost). The sound here: TREM off, DEPTH 0. Up: TREM on at full depth; back: off again
+3200 wheel 1 485
+3400 expect state p.3 0
+3400 expect state p.2 1
+3400 expect state twdepth 127
+3400 expect state modw 127
+3500 wheel 1 620
+3700 expect state p.3 0
+3700 expect state p.2 0
+3700 expect state twdepth 0
+3700 expect state modw 0
+# a DEPTH set (CC 18 64) and TREM on (CC 17 64): the wheel adds to it, half way = half the rest; at rest DEPTH again
+3750 midi 0xB0 18 64
+3760 midi 0xB0 17 64
+3800 expect state twdepth 64
+3850 wheel 1 550
+3950 expect state modw 59
+3950 expect state twdepth 93
+3950 expect state p.3 64
+4000 wheel 1 485
+4100 expect state twdepth 127
+4150 wheel 1 620
+4250 expect state twdepth 64
+4250 expect state p.3 64
+4250 expect state p.2 1
+# switched on by the wheel, then by hand (TREM pad / CC) to something else: the wheel at rest leaves it
+4300 midi 0xB0 17 0
+4350 wheel 1 485
+4450 expect state p.2 1
+4460 midi 0xB0 17 127
+4500 wheel 1 620
+4600 expect state p.2 2
+4610 midi 0xB0 17 0
+# VIBES (CC 79 0): the motor's depth (p.55, 110 in this sound) plus the wheel; the motor switched on and off again
+4700 midi 0xB0 79 0
+4750 midi 0xB0 47 0
+4800 expect state motdepth 110
+4900 wheel 1 485
+5000 expect state p.55 110
+5000 expect state p.54 1
+5000 expect state motdepth 127
+5100 wheel 1 620
+5200 expect state p.55 110
+5200 expect state p.54 0
+5200 expect state motdepth 110
+5300 end

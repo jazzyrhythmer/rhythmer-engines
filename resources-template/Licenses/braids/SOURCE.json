@@ -1,0 +1,14 @@
+{
+  "id": "braids",
+  "repo": "charlesvestal/schwung-braids",
+  "tag": "v0.2.8",
+  "url": "https://github.com/charlesvestal/schwung-braids/releases/download/v0.2.8/braids-module.tar.gz",
+  "sha256": "557909ab4b901a308c4c0c45028f640bab2786d3016952cbaca2e828672d29a5",
+  "bytes": 252188,
+  "digest_checked": true,
+  "source_commit": "81fc3e87abcc19a65c5920d8524ed41a915feadb",
+  "dsp_sha256": "b26415737a03e34a7dedcf68e211a90c0546873d0bb6212097f0473647f8da0c",
+  "name": "Braids",
+  "parameters": 17,
+  "module_folder": "move-originals/braids/braids"
+}

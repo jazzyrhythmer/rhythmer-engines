@@ -1,0 +1,53 @@
+# SMK-37 build only (make test-smk): its eight knobs, by its own ids (K1 MASTER 0, K2 SELECT 1, K3 ALGORITHM 2,
+# K4 PRESETS 3, K5..K8 the cards 4..7). ui.c read seven encoders into d[7]: K8 (7) was read past the array, so card 4
+# lost its turns, and K1 (MASTER, platform.c's) was taken by the UI as well. Now: K8 reaches card 4, K1 is left alone.
+# PERFORM's K4 REVERB p.19, K1 DRIVE p.1, from the boot preset F01 (0.9.5's bank: REVERB 18, DRIVE 0).
+0 ids smk
+# (2026-11-10) the boot preset's voicing, compressor, reverb and LEVEL as this script was written for (F01 before the
+# proposed 19; dry_dist.TYPE_BASE): the script tests its feature, not F01's record
+20 midi 0xB0 28 64
+20 midi 0xB0 29 64
+20 midi 0xB0 30 64
+20 midi 0xB0 31 64
+20 midi 0xB0 102 64
+20 midi 0xB0 103 64
+20 midi 0xB0 104 48
+20 midi 0xB0 105 0
+20 midi 0xB0 107 50
+20 midi 0xB0 112 16
+20 midi 0xB0 108 80
+20 midi 0xB0 109 72
+20 midi 0xB0 113 8
+20 midi 0xB0 91 18
+20 midi 0xB0 95 32
+20 midi 0xB0 69 70
+20 midi 0xB0 92 64
+20 midi 0xB0 93 64
+20 midi 0xB0 94 0
+20 midi 0xB0 73 0
+20 midi 0xB0 68 64
+20 midi 0xB0 110 52
+100 turn 7 5
+200 expect state page PERFORM
+200 expect state p.19 23
+200 expect state card3 1.8
+300 turn 4 10
+400 expect state p.1 10
+# K1: MASTER's, not the UI's: its detents go to MASTER (smk_input.h: 24 a detent, from 724; the host reads them as
+# platform_poll does)
+500 turn 0 4
+600 expect state mastq 0
+600 expect state master 820
+600 expect state page PERFORM
+600 expect state p.1 10
+600 expect state p.19 23
+# K2 SELECT: the next page (FRODHES); its K4 is empty since the velocity page (74789ff4: KEY VEL moved there), so K8
+# reaching card 4 is the PERFORM check above
+700 turn 1 1
+800 expect state page FRODHES
+# K6 / K7 on FRODHES: the engine's K2 / K3 (TONE, BELL): a turn moves them, not the cards beside
+1100 turn 5 1
+1100 turn 6 1
+1200 expect state hot 2
+1300 shot
+1400 end

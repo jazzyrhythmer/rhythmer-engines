@@ -1,0 +1,221 @@
+{
+  "entries": [
+    {
+      "name": "Rhythmer Kit",
+      "authors": "Jazzy Rhythmer",
+      "license": "AGPL-3.0-only",
+      "notes": "Kit host, routing, interface and integration; source engines retain their own licenses.",
+      "url": "https://github.com/jazzyrhythmer/mpc-sample-rhythmer-os",
+      "role": "engine"
+    },
+    {
+      "name": "Sophie",
+      "authors": "Matt Estela; digisophie contributors",
+      "license": "MIT",
+      "notes": "Original Sophie DSP and sound design.",
+      "url": "https://github.com/mestela/schwung-sophie",
+      "role": "engine"
+    },
+    {
+      "name": "Elixir",
+      "authors": "dmajka; Erica Synths; Julian Schmidt / Sonic Potions",
+      "license": "GPL-3.0",
+      "notes": "Elixir / LXR-02 / LXR lineage. Original component notices retained. External Erica/Hrtl banks excluded.",
+      "url": "https://github.com/dmajka/elixir",
+      "role": "engine"
+    },
+    {
+      "name": "Aphex",
+      "authors": "Filliformes",
+      "license": "MIT",
+      "notes": "Original Aphex engine and factory sounds.",
+      "url": "https://github.com/filliformes/aphex-move",
+      "role": "engine"
+    },
+    {
+      "name": "FM-106",
+      "authors": "PatttF; Leo Kuroshita / Hugelton Instruments",
+      "license": "GPL-3.0-only",
+      "notes": "Felucca, SLOOP and Dinghy lineage; original KR-106 and platform acknowledgements retained.",
+      "url": "https://github.com/PatttF/fm-106",
+      "role": "engine"
+    },
+    {
+      "name": "FMini-1",
+      "authors": "Guilherme Ruppert; Leo Kuroshita / Hugelton Instruments",
+      "license": "GPL-3.0-only",
+      "notes": "FMini-1 and Felucca synthesis lineage.",
+      "url": "https://github.com/ruppert/fmini-1",
+      "role": "engine"
+    },
+    {
+      "name": "CS-1",
+      "authors": "twochannels; zvenson; Leo Kuroshita; isod89",
+      "license": "GPL-3.0-only",
+      "notes": "CS-1, Dinghy, Felucca and SLOOP lineage.",
+      "url": "https://github.com/twochannels/CS-1",
+      "role": "engine"
+    },
+    {
+      "name": "OberVave",
+      "authors": "zvenson; Leo Kuroshita; isod89",
+      "license": "GPL-3.0-only",
+      "notes": "OberVave, Dinghy, Felucca and SLOOP lineage.",
+      "url": "https://github.com/zvenson/obervave",
+      "role": "engine"
+    },
+    {
+      "name": "K-WASUB",
+      "authors": "Guizmoh; Omnipotard; Leo Kuroshita; zvenson; twochannels",
+      "license": "GPL-3.0-only",
+      "notes": "K-WASUB / KAWA with Dinghy, CS-1 and Felucca lineage.",
+      "url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1",
+      "role": "engine"
+    },
+    {
+      "name": "Hera",
+      "authors": "Jean Pierre Cimalando (jpcima); Charles Vestal",
+      "license": "GPL-3.0; ISC components",
+      "notes": "Hera synthesis and Schwung / Move integration. Original Faust and BBD component notices retained.",
+      "url": "https://github.com/charlesvestal/schwung-hera",
+      "role": "engine"
+    },
+    {
+      "name": "Braids",
+      "authors": "Emilie Gillet / Mutable Instruments; Charles Vestal",
+      "license": "MIT",
+      "notes": "Original Braids DSP and Schwung / Move port.",
+      "url": "https://github.com/charlesvestal/schwung-braids",
+      "role": "engine"
+    },
+    {
+      "name": "Plaits",
+      "authors": "Emilie Gillet / Mutable Instruments; j3threejay",
+      "license": "MIT",
+      "notes": "Original Plaits DSP and Move port.",
+      "url": "https://github.com/j3threejay/move-anything-plaits",
+      "role": "engine"
+    },
+    {
+      "name": "Hortator",
+      "authors": "DEADACTIVE; Leo Kuroshita; Emilie Gillet",
+      "license": "GPL-3.0-only; component notices",
+      "notes": "Felucca / Skiff lineage and Mutable Instruments components; VCSL recordings by Versilian Studios / Sam Gossner are CC0.",
+      "url": "https://github.com/deadactive/hortator",
+      "role": "engine"
+    },
+    {
+      "name": "MONO2K",
+      "authors": "Inigo Hernandez; Leo Kuroshita; original CS-1 / X0X / FoMni contributors",
+      "license": "GPL-3.0-only",
+      "notes": "Original synthesis and upstream source notices retained; no proprietary ROMs included.",
+      "url": "https://github.com/InigoHernandez/mono2k",
+      "role": "engine"
+    },
+    {
+      "name": "Prophet",
+      "authors": "Kerem Kilic / Ellic Studio; Leo Kuroshita",
+      "license": "GPL-3.0-only",
+      "notes": "Melodee FM-1 / Felucca source lineage. Sequential external bank excluded; Rhythmer-authored sounds credited to Jazzy Rhythmer.",
+      "url": "https://github.com/keremimo/melodee",
+      "role": "engine"
+    },
+    {
+      "name": "S1Vave",
+      "authors": "Andrew GG / AndrewGG88; zvenson; Leo Kuroshita; isod89",
+      "license": "GPL-3.0-only",
+      "notes": "S1Vave, OberVave / Dinghy, Felucca and SLOOP lineage.",
+      "url": "https://github.com/AndrewGG88/S1Vave",
+      "role": "engine"
+    },
+    {
+      "name": "Dexed",
+      "authors": "Pascal Gauthier / asb2m10; Google / MSFA contributors; Charles Vestal",
+      "license": "GPL-3.0; Apache-2.0 MSFA",
+      "notes": "Dexed / MSFA synthesis with Schwung / Move integration.",
+      "url": "https://github.com/charlesvestal/schwung-dx7",
+      "role": "engine"
+    },
+    {
+      "name": "Guru-600",
+      "authors": "Marc Masse / MarcGoudy; Leo Kuroshita",
+      "license": "GPL-3.0-only",
+      "notes": "Felucca lineage. Original GliGli program collection and Surge XT sound credits retained.",
+      "url": "https://github.com/MarcGoudy/guru-600",
+      "role": "engine"
+    },
+    {
+      "name": "Frodhes",
+      "authors": "Leonardo Mirabal; Leo Kuroshita; isod89; zvenson",
+      "license": "GPL-3.0-only",
+      "notes": "Original MPC synthesis; Felucca, SLOOP and Dinghy lineage.",
+      "url": "https://github.com/leonardoMirabal/frodhes",
+      "role": "engine"
+    },
+    {
+      "name": "Tenebrae",
+      "authors": "legsmechanical; Schwung API contributors",
+      "license": "MIT",
+      "notes": "Original eight-model Tenebrae synthesis and banks.",
+      "url": "https://github.com/legsmechanical/schwung-tenebrae",
+      "role": "engine"
+    },
+    {
+      "name": "DRUM-X",
+      "authors": "Juan Ignacio Antonucci / Juan Jiant; Leo Kuroshita",
+      "license": "GPL-3.0-only",
+      "notes": "JIANT / Felucca drum synthesis.",
+      "url": "https://github.com/juanjiant-bit/JIANT",
+      "role": "kit-source"
+    },
+    {
+      "name": "K-WASUB Drums",
+      "authors": "Guizmoh; original K-WASUB / KAWA contributors",
+      "license": "GPL-3.0-only",
+      "notes": "Original K-WASUB drum mode; same upstream lineage as K-WASUB.",
+      "url": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1",
+      "role": "kit-source"
+    },
+    {
+      "name": "6W6",
+      "authors": "athousanddetails; sd88me",
+      "license": "GPL-3.0",
+      "notes": "Original drum synthesis and MPC port.",
+      "url": "https://github.com/sd88me/mpc-vst-TR-MPC",
+      "role": "kit-source"
+    },
+    {
+      "name": "8W8",
+      "authors": "athousanddetails; sd88me",
+      "license": "GPL-3.0",
+      "notes": "Original drum synthesis and MPC port.",
+      "url": "https://github.com/sd88me/mpc-vst-TR-MPC",
+      "role": "kit-source"
+    },
+    {
+      "name": "9W9",
+      "authors": "athousanddetails; sd88me",
+      "license": "GPL-3.0",
+      "notes": "Original drum synthesis and MPC port.",
+      "url": "https://github.com/sd88me/mpc-vst-TR-MPC",
+      "role": "kit-source"
+    },
+    {
+      "name": "CW-78",
+      "authors": "athousanddetails; sd88me",
+      "license": "GPL-3.0",
+      "notes": "Original drum synthesis and MPC port.",
+      "url": "https://github.com/sd88me/mpc-vst-TR-MPC",
+      "role": "kit-source"
+    },
+    {
+      "name": "TR-MPC",
+      "authors": "sd88me; original ER-99 contributors",
+      "license": "GPL-3.0",
+      "notes": "MPC drum engine; retained ER-99 cymbal source notices.",
+      "url": "https://github.com/sd88me/mpc-vst-TR-MPC",
+      "role": "kit-source"
+    }
+  ],
+  "scope": "Attribution summary. Full copyright and license texts, dependency notices and pinned source provenance are retained in Licenses/ and SOURCE-INDEX.json."
+}

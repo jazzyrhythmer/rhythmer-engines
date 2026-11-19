@@ -1,0 +1,65 @@
+# The VIBES motor by MIDI (records v3: its own CCs, 47 ON, 48 DEPTH, 49 RATE, 50 SHAPE, 51 SYNC): the bar engine's
+# tube discs turn; TREM/WAH stays off. Effects on (no RAW).
+# (2026-11-10) the boot preset's voicing, compressor, reverb and LEVEL as this script was written for (F01 before the
+# proposed 19; dry_dist.TYPE_BASE): the script tests its feature, not F01's record
+20 midi 0xB0 28 64
+20 midi 0xB0 29 64
+20 midi 0xB0 30 64
+20 midi 0xB0 31 64
+20 midi 0xB0 102 64
+20 midi 0xB0 103 64
+20 midi 0xB0 104 48
+20 midi 0xB0 105 0
+20 midi 0xB0 107 50
+20 midi 0xB0 112 16
+20 midi 0xB0 108 80
+20 midi 0xB0 109 72
+20 midi 0xB0 113 8
+20 midi 0xB0 91 18
+20 midi 0xB0 95 32
+20 midi 0xB0 69 70
+20 midi 0xB0 92 64
+20 midi 0xB0 93 64
+20 midi 0xB0 94 0
+20 midi 0xB0 73 0
+20 midi 0xB0 68 64
+20 midi 0xB0 110 52
+50 midi 0xB0 79 0
+51 midi 0xB0 47 127
+53 midi 0xB0 48 127
+54 midi 0xB0 49 78
+55 midi 0xB0 64 127
+60 dump
+60 expect state vcard.2.0 ON
+60 expect state vcard.2.2 3.5HZ
+60 expect state card.7.0 OFF
+100 midi 0x90 69 100
+100 midi 0x90 57 100
+# 0.9.13 (SND3 balance): the bars 3 dB down into the mix (bars.c BAR_MIX_G): every 'rms >' floor -3 dB (the '<' ceilings stay)
+1500 expect rms > -48
+3000 expect rms > -53
+# synced rate (CC 51 64 = 4T): the motor follows the tempo
+3100 midi 0xB0 51 64
+3150 expect state vcard.2.2 4T
+3200 midi 0x90 64 100
+4000 expect rms > -53
+3990 midi 0xB0 51 0
+# depth 0: the discs stay open
+4100 midi 0xB0 48 0
+4200 midi 0x90 62 100
+4800 expect rms > -48
+# ST77 with the motor on: the Rhodes has no motor (and no tremolo comes on)
+4900 midi 0xB0 48 100
+5000 midi 0xB0 80 0
+5050 expect state card.7.0 OFF
+5100 midi 0x90 60 100
+5600 expect rms > -48
+5700 midi 0xB0 64 0
+5700 midi 0x80 69 0
+5700 midi 0x80 57 0
+5700 midi 0x80 64 0
+5700 midi 0x80 62 0
+5700 midi 0x80 60 0
+5800 midi 0xB0 47 0
+7500 expect rms < -60
+7500 end

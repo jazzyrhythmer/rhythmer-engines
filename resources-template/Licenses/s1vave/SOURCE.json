@@ -1,0 +1,30 @@
+{
+  "id": "s1vave",
+  "name": "S1Vave",
+  "repo": "https://github.com/AndrewGG88/S1Vave.git",
+  "commit": "cfdfc06f77c81ce7cacf8b4a57cb940b54bddfa9",
+  "adapter": "obv_native.c",
+  "submodules": [],
+  "files": {
+    "firmware/src/obv_dsp.h": "8e6ad7fe8787217070fbca140d7b9580f7bc9cbcb8d128a2fb7d1abba210c574",
+    "firmware/src/obv_params.h": "dc2efae569826fba9adfdb4193aaf1a92e097d231ecc6a1d1c9c67fe27e609ca",
+    "firmware/src/obv_fx.h": "6493a515699fa61fbe9ddcaf5e8640db51a26c9c96dc26019640cd5648200baa",
+    "firmware/src/obv_engine.h": "22d9147e822fb23a0efa86313a7c74b30a283c0d59463b4a9edd43675f455c02",
+    "firmware/src/obv_patches.h": "35ab8f59827fac62545939f4d5e095fcf8d81d61c6985d6817850845721d6fab",
+    "firmware/gen/obv_tables.h": "c2cce8d128151c12578abc99b5b02f873d64349a816e64053e79fb632c54db94"
+  },
+  "display_source": {
+    "commit": "cfdfc06f77c81ce7cacf8b4a57cb940b54bddfa9",
+    "file": "firmware/src/s1vave.c",
+    "sha256": "bd96afe8de41746ad17ca52bb99494a4d72bf7f9247e942fb95fc55f846a94ae",
+    "functions": [
+      "fmt_u",
+      "slen",
+      "scat",
+      "fmt_ms",
+      "param_value"
+    ],
+    "adapter_fragment": "ports/common/s1vave_display.h",
+    "fragment_sha256": "caf6be7b40f051e9ef40d1ad59867f787e27716455b024b280841687359741fa"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "id": "dexed",
+  "repo": "charlesvestal/schwung-dx7",
+  "tag": "v0.5.15",
+  "url": "https://github.com/charlesvestal/schwung-dx7/releases/download/v0.5.15/dexed-module.tar.gz",
+  "sha256": "6ab459a1be35e8259f38a07ec8452ce67f01e1f3ef5fa39c7c87472efdb11abe",
+  "bytes": 285077,
+  "digest_checked": true,
+  "source_commit": "7efe26d03b9e8c8013cdf98008eb62150479f00d",
+  "dsp_sha256": "19f667fc2ef0301b3155b9a8a53e4805d20c0b77d85ee7e88e3ae934516f64d5",
+  "name": "Dexed",
+  "parameters": 148,
+  "module_folder": "move-originals/dexed/dexed"
+}

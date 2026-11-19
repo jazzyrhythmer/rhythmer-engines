@@ -1,0 +1,82 @@
+{
+  "repo": "https://github.com/ruppert/fmini-1.git",
+  "commit": "02f5c53b09e85c132fba01132935218a5a737cff",
+  "scope": "Upstream full-firmware credit context; actual DSP inclusion must be distinguished from UI/hardware/measurement references",
+  "documents": [
+    {
+      "path": "CREDITS.md",
+      "sha256": "72540c107d1ee3ea16ac518f8becd18cd695111fba2a574e32ebe8a4f9343115",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/CREDITS.md"
+    },
+    {
+      "path": "LICENSE",
+      "sha256": "f891e12d75c1d914547a88ca8914530c7c89d5088e0adac37f06da85439be987",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSE"
+    },
+    {
+      "path": "LICENSES/Apache-2.0-msfa.txt",
+      "sha256": "27dd23b62bc11d0806562397a1e782f86fc7dcacd1ba7a1b58d3c78a54795e62",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/Apache-2.0-msfa.txt"
+    },
+    {
+      "path": "LICENSES/Apache-2.0.txt",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/Apache-2.0.txt"
+    },
+    {
+      "path": "LICENSES/MIT-DaisySP.txt",
+      "sha256": "7fa755aede5b5c2a8131a6db692f5818ed8d21dcbe632f41618af03b6d698126",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/MIT-DaisySP.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Felucca-Engines.txt",
+      "sha256": "8d7a6483ea3289b07b1d9d5a4b760c8e6c69d22ca4248cad6fec14afa0ee5f4b",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/MIT-Felucca-Engines.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Fukiai.txt",
+      "sha256": "fddeab17d69ab85a8e9c593beb0e93c279a9d74ff9504e1804bba123cb63e08e",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/MIT-Fukiai.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Rings.txt",
+      "sha256": "60cd097bf74b2a3a0cadadeddec5d80b6806f83039e6ce9cb0ba511a1f17a2be",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/MIT-Rings.txt"
+    },
+    {
+      "path": "LICENSES/OFL-DotGothic16.txt",
+      "sha256": "5e59cab6d61d59a5b3110ed900dce715383cb2626a473dcf77c13c116aa839eb",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/OFL-DotGothic16.txt"
+    },
+    {
+      "path": "LICENSES/OFL-InterTight.txt",
+      "sha256": "50240ab035cf1b6b3307940235481d515c4b6de3ab1fa843dbe59e7892cb9d58",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/OFL-InterTight.txt"
+    },
+    {
+      "path": "LICENSES/gpl-3.0.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSES/gpl-3.0.txt"
+    },
+    {
+      "path": "LICENSING.md",
+      "sha256": "d68d9e125b9eb22501cf8209aee1b247c102d83de3d8a181a4335ea03d8ecc5e",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/LICENSING.md"
+    },
+    {
+      "path": "README.md",
+      "sha256": "4c9331a60bf728b39f032a04eac9f07671808ed2bf01dd8c2dbc49d89aab442a",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/README.md"
+    },
+    {
+      "path": "assets/samples-cc0/CREDITS.txt",
+      "sha256": "3c46cd9a446ac903b1b8f460087e2af1d1f246b8543327b26eedac85fbd788bc",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/assets/samples-cc0/CREDITS.txt"
+    },
+    {
+      "path": "web/FUKIAI-LICENSE.txt",
+      "sha256": "fddeab17d69ab85a8e9c593beb0e93c279a9d74ff9504e1804bba123cb63e08e",
+      "source_url": "https://github.com/ruppert/fmini-1/blob/02f5c53b09e85c132fba01132935218a5a737cff/web/FUKIAI-LICENSE.txt"
+    }
+  ]
+}

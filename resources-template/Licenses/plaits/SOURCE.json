@@ -1,0 +1,22 @@
+{
+  "id": "plaits",
+  "repo": "j3threejay/move-anything-plaits",
+  "tag": "v0.5.1",
+  "url": "https://github.com/j3threejay/move-anything-plaits/releases/download/v0.5.1/plaits-module.tar.gz",
+  "sha256": "3bf8efbba8d8b850fed40848baaf33607fcc3fcbf7c6265b03c3acc5e0cd6346",
+  "bytes": 718934,
+  "digest_checked": true,
+  "source_commit": "39c90e4ea8517f85117338338429acc3ce77c9b7",
+  "dsp_sha256": "d033645b95851efaea8dd5ea8d96c20849a1da7156058548045cedf1c97fcf31",
+  "name": "Plaits",
+  "parameters": 14,
+  "module_folder": "move-originals/plaits/plaits",
+  "reference_sources": {
+    "commit": "39c90e4ea8517f85117338338429acc3ce77c9b7",
+    "root": "src/dsp",
+    "files": {
+      "stmlib/stmlib.h": "3afc8589a951e882d9eea16b3eda8623dd6fb0079dd11dfbce817e65be6cfba9",
+      "stmlib/dsp/hysteresis_quantizer.h": "06032c1ec2e21cb7e904544f839a2a59b4c4a9f3f391918e6adfac7f68ecc243"
+    }
+  }
+}

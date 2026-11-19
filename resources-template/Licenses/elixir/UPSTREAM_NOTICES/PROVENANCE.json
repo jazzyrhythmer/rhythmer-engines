@@ -1,0 +1,67 @@
+{
+  "repo": "https://github.com/dmajka/elixir.git",
+  "commit": "aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4",
+  "scope": "Upstream full-firmware credit context; actual DSP inclusion must be distinguished from UI/hardware/measurement references",
+  "documents": [
+    {
+      "path": "LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSE"
+    },
+    {
+      "path": "LICENSES/Apache-2.0.txt",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/Apache-2.0.txt"
+    },
+    {
+      "path": "LICENSES/BSD-2-Clause-enosc.txt",
+      "sha256": "b1bd4db5c5202fd0e1c853e0e3499ca7cbfb21f1daa29c6994d2be8d115f9d85",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/BSD-2-Clause-enosc.txt"
+    },
+    {
+      "path": "LICENSES/GPL-3.0-LXR.txt",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/GPL-3.0-LXR.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Clouds.txt",
+      "sha256": "e0803c0fb57829bf5b39a2b2fcac5488d79838a9e5e2b0cd4d6596f38b296424",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/MIT-Clouds.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Marbles.txt",
+      "sha256": "f422088f468b99b23607a915c9e73fa18efd9407e527817052d95d92ef070700",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/MIT-Marbles.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Plaits.txt",
+      "sha256": "40af0c44cda0a5b0ab5abd25d9673d44abc2c3633eb730ac5cbe074a0d877cf2",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/MIT-Plaits.txt"
+    },
+    {
+      "path": "LICENSES/MIT-Rings.txt",
+      "sha256": "4961348168c845563466f0b6f00a86c3fcca2d2135429dd07c3ee4f624ad6b16",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/MIT-Rings.txt"
+    },
+    {
+      "path": "LICENSES/OFL-DotGothic16.txt",
+      "sha256": "5e59cab6d61d59a5b3110ed900dce715383cb2626a473dcf77c13c116aa839eb",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/OFL-DotGothic16.txt"
+    },
+    {
+      "path": "LICENSES/OFL-InterTight.txt",
+      "sha256": "50240ab035cf1b6b3307940235481d515c4b6de3ab1fa843dbe59e7892cb9d58",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/LICENSES/OFL-InterTight.txt"
+    },
+    {
+      "path": "NOTICE.md",
+      "sha256": "12766a6b678c2be8500e302f0f978d81b3d493de2d482ff953aa8b38b765e94b",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/NOTICE.md"
+    },
+    {
+      "path": "README.md",
+      "sha256": "1e8b03ac29ffa8a893cf6707727fff09b2ce78cdfd92ff7b4d668efc06e065c1",
+      "source_url": "https://github.com/dmajka/elixir/blob/aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4/README.md"
+    }
+  ]
+}

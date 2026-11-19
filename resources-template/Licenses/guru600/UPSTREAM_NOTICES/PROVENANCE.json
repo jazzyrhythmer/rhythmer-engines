@@ -1,0 +1,237 @@
+{
+  "repo": "https://github.com/MarcGoudy/guru-600.git",
+  "commit": "3f6c7272108ab6d2a285f53f37c5dc7b008f3002",
+  "scope": "Upstream full-firmware credit context; actual DSP inclusion must be distinguished from UI/hardware/measurement references",
+  "documents": [
+    {
+      "path": "LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/LICENSE"
+    },
+    {
+      "path": "README.md",
+      "sha256": "50f8b1d1f7f70332262c3a2e923023d79172a79ced397f6ee15f2f97c214147c",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/README.md"
+    },
+    {
+      "path": "docs/editor/fonts/MonRong-licence.txt",
+      "sha256": "f05db89d2d8cee6f93ecfdbc7ee36b9374e56009393b07e6178067eb25abe739",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/editor/fonts/MonRong-licence.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSE"
+    },
+    {
+      "path": "docs/firmware/LICENSES/Apache-2.0-msfa.txt",
+      "sha256": "27dd23b62bc11d0806562397a1e782f86fc7dcacd1ba7a1b58d3c78a54795e62",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/Apache-2.0-msfa.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSES/Apache-2.0.txt",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/Apache-2.0.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSES/MIT-DaisySP.txt",
+      "sha256": "7fa755aede5b5c2a8131a6db692f5818ed8d21dcbe632f41618af03b6d698126",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/MIT-DaisySP.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSES/MIT-Felucca-Engines.txt",
+      "sha256": "8d7a6483ea3289b07b1d9d5a4b760c8e6c69d22ca4248cad6fec14afa0ee5f4b",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/MIT-Felucca-Engines.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSES/MIT-Fukiai.txt",
+      "sha256": "fddeab17d69ab85a8e9c593beb0e93c279a9d74ff9504e1804bba123cb63e08e",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/MIT-Fukiai.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSES/MIT-Rings.txt",
+      "sha256": "60cd097bf74b2a3a0cadadeddec5d80b6806f83039e6ce9cb0ba511a1f17a2be",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/MIT-Rings.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSES/OFL-DotGothic16.txt",
+      "sha256": "5e59cab6d61d59a5b3110ed900dce715383cb2626a473dcf77c13c116aa839eb",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/OFL-DotGothic16.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSES/OFL-InterTight.txt",
+      "sha256": "50240ab035cf1b6b3307940235481d515c4b6de3ab1fa843dbe59e7892cb9d58",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/OFL-InterTight.txt"
+    },
+    {
+      "path": "docs/firmware/LICENSES/index.html",
+      "sha256": "54345d898b53d933e1c051349b4b2a8c94a3de0a14c736c6b942f664c3309e0b",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSES/index.html"
+    },
+    {
+      "path": "docs/firmware/LICENSING.md",
+      "sha256": "4190bd96a056318a7fe74361c52d236dd19b348af76df0bcad6f39b8325d72d5",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/firmware/LICENSING.md"
+    },
+    {
+      "path": "docs/guide/fonts/MonRong-licence.txt",
+      "sha256": "f05db89d2d8cee6f93ecfdbc7ee36b9374e56009393b07e6178067eb25abe739",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/guide/fonts/MonRong-licence.txt"
+    },
+    {
+      "path": "docs/webapp/editor/FUKIAI-LICENSE.txt",
+      "sha256": "fddeab17d69ab85a8e9c593beb0e93c279a9d74ff9504e1804bba123cb63e08e",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/webapp/editor/FUKIAI-LICENSE.txt"
+    },
+    {
+      "path": "docs/webapp/installer/MonRong-licence.txt",
+      "sha256": "f05db89d2d8cee6f93ecfdbc7ee36b9374e56009393b07e6178067eb25abe739",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/docs/webapp/installer/MonRong-licence.txt"
+    },
+    {
+      "path": "emulator/LICENSE",
+      "sha256": "de303af17a9bed9ac5ab105f33ef72b3aa5c658d30132d13609db45f7fc7f257",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/emulator/LICENSE"
+    },
+    {
+      "path": "emulator/fm1-sid/web/LICENSES/Apache-2.0.txt",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/emulator/fm1-sid/web/LICENSES/Apache-2.0.txt"
+    },
+    {
+      "path": "emulator/vendor/minifb-0.28.0/LICENSE",
+      "sha256": "2fefb02c47f56d200e55eebe89ceab3c4749dc08867c400d0561d6570dac473e",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/emulator/vendor/minifb-0.28.0/LICENSE"
+    },
+    {
+      "path": "emulator/vendor/minifb-0.28.0/LICENSE-APACHE",
+      "sha256": "a60eea817514531668d7e00765731449fe14d059d3249e0bc93b36de45f759f2",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/emulator/vendor/minifb-0.28.0/LICENSE-APACHE"
+    },
+    {
+      "path": "emulator/vendor/minifb-0.28.0/LICENSE-MIT",
+      "sha256": "ad6d10e27d4b204bcba750fc1e9cc4e720cd22fccaef70b2ff7aeed32e279f2c",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/emulator/vendor/minifb-0.28.0/LICENSE-MIT"
+    },
+    {
+      "path": "firmware/CREDITS.md",
+      "sha256": "ba2eeedc183cea00150ec4eab0fc4b611918e35976da4aef360af71e9e5453dc",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/CREDITS.md"
+    },
+    {
+      "path": "firmware/LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSE"
+    },
+    {
+      "path": "firmware/LICENSES/Apache-2.0-msfa.txt",
+      "sha256": "27dd23b62bc11d0806562397a1e782f86fc7dcacd1ba7a1b58d3c78a54795e62",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSES/Apache-2.0-msfa.txt"
+    },
+    {
+      "path": "firmware/LICENSES/Apache-2.0.txt",
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSES/Apache-2.0.txt"
+    },
+    {
+      "path": "firmware/LICENSES/MIT-DaisySP.txt",
+      "sha256": "7fa755aede5b5c2a8131a6db692f5818ed8d21dcbe632f41618af03b6d698126",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSES/MIT-DaisySP.txt"
+    },
+    {
+      "path": "firmware/LICENSES/MIT-Felucca-Engines.txt",
+      "sha256": "8d7a6483ea3289b07b1d9d5a4b760c8e6c69d22ca4248cad6fec14afa0ee5f4b",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSES/MIT-Felucca-Engines.txt"
+    },
+    {
+      "path": "firmware/LICENSES/MIT-Fukiai.txt",
+      "sha256": "fddeab17d69ab85a8e9c593beb0e93c279a9d74ff9504e1804bba123cb63e08e",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSES/MIT-Fukiai.txt"
+    },
+    {
+      "path": "firmware/LICENSES/MIT-Rings.txt",
+      "sha256": "60cd097bf74b2a3a0cadadeddec5d80b6806f83039e6ce9cb0ba511a1f17a2be",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSES/MIT-Rings.txt"
+    },
+    {
+      "path": "firmware/LICENSES/OFL-DotGothic16.txt",
+      "sha256": "5e59cab6d61d59a5b3110ed900dce715383cb2626a473dcf77c13c116aa839eb",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSES/OFL-DotGothic16.txt"
+    },
+    {
+      "path": "firmware/LICENSES/OFL-InterTight.txt",
+      "sha256": "50240ab035cf1b6b3307940235481d515c4b6de3ab1fa843dbe59e7892cb9d58",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSES/OFL-InterTight.txt"
+    },
+    {
+      "path": "firmware/LICENSING.md",
+      "sha256": "4190bd96a056318a7fe74361c52d236dd19b348af76df0bcad6f39b8325d72d5",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/LICENSING.md"
+    },
+    {
+      "path": "firmware/assets/samples-cc0/CREDITS.txt",
+      "sha256": "3c46cd9a446ac903b1b8f460087e2af1d1f246b8543327b26eedac85fbd788bc",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/assets/samples-cc0/CREDITS.txt"
+    },
+    {
+      "path": "firmware/firmware/engines/LICENSE",
+      "sha256": "8d7a6483ea3289b07b1d9d5a4b760c8e6c69d22ca4248cad6fec14afa0ee5f4b",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/firmware/engines/LICENSE"
+    },
+    {
+      "path": "firmware/web/FUKIAI-LICENSE.txt",
+      "sha256": "fddeab17d69ab85a8e9c593beb0e93c279a9d74ff9504e1804bba123cb63e08e",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/firmware/web/FUKIAI-LICENSE.txt"
+    },
+    {
+      "path": "tools/editeur/fonts/MonRong-licence.txt",
+      "sha256": "f05db89d2d8cee6f93ecfdbc7ee36b9374e56009393b07e6178067eb25abe739",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/editeur/fonts/MonRong-licence.txt"
+    },
+    {
+      "path": "tools/guide/chap/16_credits.py",
+      "sha256": "6c12ec6df6f7a11a691d6262a5e145ab39ab68084b47b15e596705e6d764bb50",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/guide/chap/16_credits.py"
+    },
+    {
+      "path": "tools/guide/fonts/MonRong-licence.txt",
+      "sha256": "f05db89d2d8cee6f93ecfdbc7ee36b9374e56009393b07e6178067eb25abe739",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/guide/fonts/MonRong-licence.txt"
+    },
+    {
+      "path": "tools/notice/chap/28_credits.py",
+      "sha256": "10cf32dcb49c732c42bee3768a04db7d8f850caea14e3475303c0318937049ee",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/notice/chap/28_credits.py"
+    },
+    {
+      "path": "tools/notice/fonts/MonRong-licence.txt",
+      "sha256": "f05db89d2d8cee6f93ecfdbc7ee36b9374e56009393b07e6178067eb25abe739",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/notice/fonts/MonRong-licence.txt"
+    },
+    {
+      "path": "tools/notice/make_notice.py",
+      "sha256": "09a8f516dc1cb8210fd05bd7581894189041b1eaf55e7d0e05ea00fc2e0a4e96",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/notice/make_notice.py"
+    },
+    {
+      "path": "tools/notice/make_notice_v1.py",
+      "sha256": "771b761b3cab8c14cfb2d3eb83f785879bbb642cc4582f39ceb2977532d462aa",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/notice/make_notice_v1.py"
+    },
+    {
+      "path": "tools/notice/notice.css",
+      "sha256": "493058066ad5733bd189a0e4e97001523f5a38a0d7a8017c36d504003482aea0",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/notice/notice.css"
+    },
+    {
+      "path": "tools/site/MonRong-licence.txt",
+      "sha256": "f05db89d2d8cee6f93ecfdbc7ee36b9374e56009393b07e6178067eb25abe739",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/site/MonRong-licence.txt"
+    },
+    {
+      "path": "tools/tests/notice_shots.c",
+      "sha256": "e528d04e529f884daaffc5cb03c0049b0b296a9dcf56fa2bb39febc4ec9769a3",
+      "source_url": "https://github.com/MarcGoudy/guru-600/blob/3f6c7272108ab6d2a285f53f37c5dc7b008f3002/tools/tests/notice_shots.c"
+    }
+  ]
+}

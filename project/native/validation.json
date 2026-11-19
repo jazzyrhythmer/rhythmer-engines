@@ -1,0 +1,151 @@
+{
+  "product": "Rhythmer Engines for MPC 3",
+  "version": "0.1.0",
+  "build": 8,
+  "passed": true,
+  "published": false,
+  "physical_device_tested": false,
+  "architectures": [
+    "arm32",
+    "arm64"
+  ],
+  "entries": 20,
+  "kits": 36,
+  "visible_source_views": 26,
+  "synth_sound_selections": 2707,
+  "total_browser_entries": 2743,
+  "native_parameters": 179,
+  "retained_parameter_ids": "0-88 unchanged; appended controls 89-178",
+  "native_pages": [
+    "PLAY",
+    "EDIT",
+    "MOD",
+    "FX",
+    "KIT",
+    "ABOUT"
+  ],
+  "about": "Seven static image subpages; creator and original source credits",
+  "default": "Rhythmer Kit / K-WASUB / 909",
+  "excluded": [
+    "GEN",
+    "CHORD GEN",
+    "Acid Engine",
+    "Break Engine"
+  ],
+  "native_programs": 20,
+  "native_program_role": "MPC PRESET and internal ENGINE select the same engine; internal SOUND/KIT selects a sound/kit",
+  "choice_browser": {
+    "type": "in-page parameter-bound rows; no native MenuOverlay",
+    "rows": 16,
+    "pagination": "PAGE / PREVIOUS / NEXT / CLOSE",
+    "selection_entries_verified": 2743,
+    "hidden_sound_controls_blocked": true,
+    "host_visibility_and_label_callbacks_verified": true
+  },
+  "editors": {
+    "sections": [
+      "EDIT",
+      "MOD",
+      "FX"
+    ],
+    "separate_page_and_control_banks": true,
+    "standalone_and_kit_selected_pad_coverage": true,
+    "standalone_bindings": 1436,
+    "kit_sources": 26,
+    "model_metadata_refresh_and_state_restore": true,
+    "canonical_sound_state_only": "TR-MPC focus aliases/actions excluded from persistence"
+  },
+  "kit_midi": {
+    "default_root": 60,
+    "default_range": [
+      60,
+      75
+    ],
+    "legacy_fallback": [
+      36,
+      51
+    ],
+    "root_range": [
+      0,
+      112
+    ],
+    "root48_tested": true,
+    "all_576_pads_audio_tested": true
+  },
+  "kit_mix": {
+    "reference": "K-WASUB / 909",
+    "existing_levels_preserved": true,
+    "pads": 576,
+    "finite_audible_output": true,
+    "peak_guard_and_mix_state_passed": true
+  },
+  "animation": {
+    "original_styles": 20,
+    "frames_per_style": 24,
+    "drivers": [
+      "note pitch",
+      "velocity",
+      "held state",
+      "measured audio level"
+    ],
+    "idle_loop": false,
+    "release_settles": true,
+    "host_notifications": "Off audio; max 25 Hz; changed frames only"
+  },
+  "q_links": "All controls mapped; fourth bank navigates browser; bank rectangles hidden; white component focus retained",
+  "host_simulator": {
+    "arm32": "18 pass, 1 warning, 0 failures, default and legacy drum notes",
+    "arm64": "18 pass, 1 warning, 0 failures, default and legacy drum notes",
+    "warning": "Raw saved chunks include changing display/motion state; semantic sound/kit state round trips pass."
+  },
+  "transport_stop": {
+    "passed": true,
+    "engines": 20,
+    "held_and_sustain_and_switch": true,
+    "residual": 0
+  },
+  "scope": "Actual ARM32 under QEMU and ARM64 Linux binaries; local host ABI/cache, parameter routing, audio, state and generated skin checks. Physical MPC Live 1 touch, Q-Link, rendering, CPU and memory remain unverified.",
+  "preset_audit": "Exact names, counts, order and bank snapshot availability compared with current authorized Sample catalogue; no new replacement patches created in this change.",
+  "checks": {
+    "interaction-arm32-native_choice_browser.log": "b46308ae25ad887f995616b50f051e3d5771db32a8bdb192a70e65ad1f329689",
+    "interaction-arm32-native_mpc_workflow.log": "536afe57c0df8b7b20d2d0bb057b1d255e2db453504f21a593685839199e5d52",
+    "interaction-arm32-native_mpc_host.log": "23ef804f13363253cfc4ddf331091398888d40c91589c638596017b3e56b4ced",
+    "interaction-arm32-native_browser_host.log": "45dea46591a153d0843c7e13f362136026ed049df9ae69d400da41c0ac872000",
+    "interaction-arm32-native_stop_all.log": "83e908f3982b5216e3fcf86928851e0451e2da943302cd922bd97772a4f9fb54",
+    "interaction-arm32-native_stop_swap.log": "416201f02fab4bbbccff8d880e08e1665b3257f10fe34ae17200ef4a54bda06e",
+    "interaction-arm32-native_instrument.log": "84a3c4cad35fc85e069ceaab2860bf046deb63af4f2df62c5b04324e5c6a4671",
+    "interaction-arm32-kit_mix_output.log": "c53b2e753b4155c0292c500eed0abb4b6f7fbf11881921baa27894be87310395",
+    "interaction-arm32-native_kit_sections.log": "ac1b1edced917fa1678c5fd98c03ea5f83808257fd137ce6dce86581982572a8",
+    "interaction-arm32-sdk-default.log": "8358f990b30f746331e2501280e0116ddfa1cc7a5f5ed68fa1ca1ddede40932b",
+    "interaction-arm32-sdk-kit.log": "bfe9e6cd21f23c220c4bbb446a6ad213127fc231f1c7cf9d3ef62346c2b9f32d",
+    "interaction-arm64-native_choice_browser.log": "b46308ae25ad887f995616b50f051e3d5771db32a8bdb192a70e65ad1f329689",
+    "interaction-arm64-native_mpc_workflow.log": "536afe57c0df8b7b20d2d0bb057b1d255e2db453504f21a593685839199e5d52",
+    "interaction-arm64-native_mpc_host.log": "5cb2cda7b963a9bbcfe9b0ffb51157567ede3171036e90a69bc6bb678147363f",
+    "interaction-arm64-native_browser_host.log": "45dea46591a153d0843c7e13f362136026ed049df9ae69d400da41c0ac872000",
+    "interaction-arm64-native_stop_all.log": "83e908f3982b5216e3fcf86928851e0451e2da943302cd922bd97772a4f9fb54",
+    "interaction-arm64-native_stop_swap.log": "416201f02fab4bbbccff8d880e08e1665b3257f10fe34ae17200ef4a54bda06e",
+    "interaction-arm64-native_instrument.log": "3090c09ca2a184f94b49627fd055fb17f796ab63c52e2919b0bec3b491c21bd2",
+    "interaction-arm64-kit_mix_output.log": "d62e05d0df475fe42198d41b5eb9cb0b0a559b43e004a56e95628061ae3f99c6",
+    "interaction-arm64-native_kit_sections.log": "ac1b1edced917fa1678c5fd98c03ea5f83808257fd137ce6dce86581982572a8",
+    "interaction-arm64-sdk-default.log": "d59b9f3e877b3fa44b72abf6c5f4910bfb3884e91d448e40c339a74441e10e98",
+    "interaction-arm64-sdk-kit.log": "4acd391e73df8e35d16c4a8a5cc460dbfb982de690d8415c721ea1aff0b932f1",
+    "workflow-mac.log": "536afe57c0df8b7b20d2d0bb057b1d255e2db453504f21a593685839199e5d52",
+    "kit-mix-mac.log": "afb0e007fe09e2a663cefd87da7c1840e7a3f6b6525236d64f0c88623b6ab033",
+    "skin-contract.json": "fd44a176da656be009a754f479b90ea75820b413584879f780ca684de19d99c6",
+    "interaction-browser-mac.log": "b46308ae25ad887f995616b50f051e3d5771db32a8bdb192a70e65ad1f329689",
+    "interaction-validator.log": "a87e0baede23dc8db0d31ef1306c26fbb038e06507f029517b54de78f641b16f",
+    "preset-name-audit.json": "473e8461ec6733cb63fba9130f857851548252c0b3791b094f4bf0c07fb701fd"
+  },
+  "source_sha256": "fa70b583d02d038780d50aa0bddefc8836311c8c48f7d12dcfbdf0118a506970",
+  "framework_sha256": "480f7d6a928d066282377cd848d56b55f472905250ed6b05c3a31c46c73bbb3d",
+  "binaries": {
+    "arm32": "4d9723b1b9ba80e5132e6fd9922fc4401028f8bd3af05822fdf1cadd3217b3f7",
+    "arm64": "bb1806a4d32f01e8323f89adbb6ddd4e94429cf3d5a17ce735c70771b4030cb6"
+  },
+  "skin_sha256": "21cfb69c14790425d18c805eacdc451d7e812dd43c05aa5c48a06e1d9c3af0f5",
+  "engine_credits": {
+    "engines": 20,
+    "kit_sources": 7,
+    "manifest_sha256": "b55fdf40737462088ab2d4c361f892f73b5f72236ba69d4999b15e39df1ec053"
+  }
+}

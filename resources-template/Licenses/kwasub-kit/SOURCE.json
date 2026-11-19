@@ -1,0 +1,14 @@
+{
+  "id": "kwasub-kit",
+  "name": "K-WASUB Kit",
+  "repo": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1.git",
+  "commit": "866abfa25325d8dffedf262af5a25e52dc47d8c9",
+  "adapter": "kwasub_native.c",
+  "files": {
+    "source/firmware/src/ksub_data.c": "87b68c727bba7e1dee0e2c3d4a2edb588d9fd32cabf8b6a16a447515e9c7ae6f",
+    "source/firmware/src/ksub_dsp.c": "dd2fc3e9428085ee9db841c62676f8ece9a2cc0d7ed226ac00b53768a8e76b11",
+    "source/firmware/gen/ksub_tables.h": "40a0c4f2bf407287e6bbcbf122b288ed3f0cc3f6847633dac50f30cebbdda25d",
+    "source/firmware/gen/ksub_samples.h": "5345a44cc42d93c9614ea68a14c40af7852884d3a50cab063143fbacf8d2efeb",
+    "source/tools/gen_ksub.py": "b8cd00c22933833dbe6a5c1466b6513298b3ea67041022bce65917c74ce08fea"
+  }
+}

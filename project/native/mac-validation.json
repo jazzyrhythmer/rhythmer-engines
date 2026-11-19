@@ -1,0 +1,94 @@
+{
+  "product": "Rhythmer Engines for Mac",
+  "version": "0.1.0",
+  "build": 8,
+  "passed": true,
+  "published": false,
+  "physical_device_tested": false,
+  "architectures": [
+    "Apple Silicon arm64"
+  ],
+  "entries": 20,
+  "kits": 36,
+  "visible_source_views": 26,
+  "sound_selections": 2876,
+  "native_parameters": 89,
+  "native_pages": [
+    "PLAY",
+    "EDIT",
+    "KIT when Rhythmer Kit is selected"
+  ],
+  "about": "ABOUT button, 9 links, scrollable engine credits, BACK",
+  "default": "Rhythmer Kit / K-WASUB / 909",
+  "excluded": [
+    "GEN",
+    "CHORD GEN",
+    "Acid Engine",
+    "Break Engine"
+  ],
+  "kit_mix": {
+    "reference": "K-WASUB / 909",
+    "reference_levels_preserved": true,
+    "pads": 576,
+    "maximum_comparison_delta_lu": 1.17,
+    "reference_phrase_lufs": -10.68,
+    "pre_master_peak_ceiling": 0.92,
+    "saved_kit_trim": true
+  },
+  "checks": {
+    "first-arm32-native_instrument.log": "3034c477e9b0889bd0178f5a04860ec6188598ca5a33c486a84643e924423c0f",
+    "first-arm32-kit_mix_output.log": "c53b2e753b4155c0292c500eed0abb4b6f7fbf11881921baa27894be87310395",
+    "first-arm32-native_control_routes.log": "4707811ac16d4ed8e522c02cae45f05a4b343d0fdb10236d0ad7bfc9247519a3",
+    "first-arm64-native_instrument.log": "9f347f6619c43079ac4bee742bb311bc6be752b31ca62f958ed9368c59c3c85e",
+    "first-arm64-kit_mix_output.log": "d62e05d0df475fe42198d41b5eb9cb0b0a559b43e004a56e95628061ae3f99c6",
+    "first-arm64-native_control_routes.log": "4707811ac16d4ed8e522c02cae45f05a4b343d0fdb10236d0ad7bfc9247519a3",
+    "mac-instrument.log": "507c4dd4b04d4af3f7642c04d83ba10ea388017d3b6e84d4a66ff08c7799877e",
+    "mac-kit-output.log": "afb0e007fe09e2a663cefd87da7c1840e7a3f6b6525236d64f0c88623b6ab033",
+    "mac-routes.log": "4707811ac16d4ed8e522c02cae45f05a4b343d0fdb10236d0ad7bfc9247519a3",
+    "mac-formats.log": "7cc9179678879e42239d30430f3586cd1f077cb7cfb29aa0c28c2b744ca8bf30",
+    "editor-layout.log": "7f27b2ba3072f64285930c709713cea41879bfcce6144e21fa0a1b55b25b9cb7"
+  },
+  "host_simulator": {
+    "arm32": "17 pass, 2 warnings, 0 failures",
+    "arm64": "17 pass, 2 warnings, 0 failures",
+    "warnings": [
+      "Generic note 60 is outside the default drum kit notes 36-51; all 576 valid pads passed actual audio checks.",
+      "Raw chunks include changing display/motion values; semantic sound state round trips pass."
+    ]
+  },
+  "scope": "Actual AU/VST3/VST2 local format loading, audio at 44.1/48/96 kHz, state, editor reopening and captures. Does not claim a tested user DAW session or physical MPC.",
+  "factory_banks": "Original banks retained. Existing full source audit baseline plus fresh 35-program Elixir audio/state checks.",
+  "evidence_sha256": {
+    "first-arm32-native_instrument.log": "3034c477e9b0889bd0178f5a04860ec6188598ca5a33c486a84643e924423c0f",
+    "first-arm32-kit_mix_output.log": "c53b2e753b4155c0292c500eed0abb4b6f7fbf11881921baa27894be87310395",
+    "first-arm32-native_control_routes.log": "4707811ac16d4ed8e522c02cae45f05a4b343d0fdb10236d0ad7bfc9247519a3",
+    "first-arm64-native_instrument.log": "9f347f6619c43079ac4bee742bb311bc6be752b31ca62f958ed9368c59c3c85e",
+    "first-arm64-kit_mix_output.log": "d62e05d0df475fe42198d41b5eb9cb0b0a559b43e004a56e95628061ae3f99c6",
+    "first-arm64-native_control_routes.log": "4707811ac16d4ed8e522c02cae45f05a4b343d0fdb10236d0ad7bfc9247519a3",
+    "mac-instrument.log": "507c4dd4b04d4af3f7642c04d83ba10ea388017d3b6e84d4a66ff08c7799877e",
+    "mac-kit-output.log": "afb0e007fe09e2a663cefd87da7c1840e7a3f6b6525236d64f0c88623b6ab033",
+    "mac-routes.log": "4707811ac16d4ed8e522c02cae45f05a4b343d0fdb10236d0ad7bfc9247519a3",
+    "mac-formats.log": "7cc9179678879e42239d30430f3586cd1f077cb7cfb29aa0c28c2b744ca8bf30",
+    "editor-layout.log": "7f27b2ba3072f64285930c709713cea41879bfcce6144e21fa0a1b55b25b9cb7"
+  },
+  "minimum_macos": "13.0",
+  "formats": [
+    "AU",
+    "VST3",
+    "VST2 custom"
+  ],
+  "engine_credits": {
+    "engines": 20,
+    "kit_sources": 7,
+    "manifest_sha256": "b55fdf40737462088ab2d4c361f892f73b5f72236ba69d4999b15e39df1ec053"
+  },
+  "transport_stop": {
+    "passed": true,
+    "scope": "Held chords, sustain, restart without notes, simultaneous engine switch; local hosts",
+    "evidence": {
+      "transport-stop-final.log": "db05d611743c8f26f3d6e906c35759665fe29bc575a6b93d34e7d05f1bb90185",
+      "vst2-stop-all.log": "83e908f3982b5216e3fcf86928851e0451e2da943302cd922bd97772a4f9fb54",
+      "stop-swap-after.log": "416201f02fab4bbbccff8d880e08e1665b3257f10fe34ae17200ef4a54bda06e"
+    }
+  }
+}

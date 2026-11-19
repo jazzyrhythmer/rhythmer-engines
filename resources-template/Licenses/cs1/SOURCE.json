@@ -1,0 +1,17 @@
+{
+  "id": "cs1",
+  "name": "CS-1",
+  "repo": "https://github.com/twochannels/CS-1.git",
+  "commit": "5dce8fadd3aa86cf47a3290289ee1c10b7c102e4",
+  "adapter": "cs1_native.c",
+  "submodules": [],
+  "files": {
+    "firmware/src/cs1_dsp.h": "787cba6cee0ff908d658e1748ea098c7ab8adfc925e8ff7a0355747585c94e97",
+    "firmware/src/cs1_voice.h": "b6a4f669cc673afc74b57c567b92f4511a400e288ac30c51579a4857c5fcb2e1",
+    "firmware/src/cs1_fx.h": "8536be42baf6317fec151793644d2c13728bde8b16192be9c63cc7b058e069af",
+    "firmware/src/cs1.c": "b7b0d0d42f5dac405955da27285a38a6b06ae3e991b00dfc05b15047307ed0ad",
+    "firmware/gen/cs1_tables.h": "f494755513ad39ffcf6e747874dadc8825a8d25e0f51c1d4813f048849f2b436",
+    "firmware/gen/cs1_presets.h": "5a352468272732f731238718766b64ee4a226c6725bd497b663a1080212c9dff",
+    "firmware/gen/cs1_sounds_conv.h": "bbd05e1a970c36eaf1b49f97d850ea1145d51a52ebc4a1a3592a3c003a214854"
+  }
+}

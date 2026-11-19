@@ -1,0 +1,12 @@
+{
+  "repo": "https://github.com/juanjiant-bit/JIANT",
+  "commit": "b2c7f365dd8b8d14047d0dbe9b4edd82cc5f09ae",
+  "files": {
+    "firmware/src/drumx_voice.c": "f7052bf85df7edce5af73b884ddf00cbb943f663b8185f64d1dbd72771eaba6c",
+    "firmware/src/dsp.c": "f3bb643947d1d80e46aeb23985f0f61cefc02c222952a06d79f79153acdf01e7",
+    "firmware/src/eng_drum.c": "a79befc4d71299531fab801277dd13e20a0d7cd2643e2cae8830677bdd683a15",
+    "firmware/src/core.h": "5e5e048be5f19264268e517deed69fa39d4b8df9b96746c4317657466ffc1b77",
+    "tools/gen_tables.py": "a1896486ffa6605c5ccb1dfbccac2e5c79e96e3a65cc938a5df52a99c15e3ad8",
+    "LICENSE": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+  }
+}

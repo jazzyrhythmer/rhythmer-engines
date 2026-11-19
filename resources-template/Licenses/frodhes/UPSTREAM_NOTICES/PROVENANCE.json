@@ -1,0 +1,52 @@
+{
+  "repo": "https://github.com/leonardoMirabal/frodhes.git",
+  "commit": "5baa6f4425198e20b24429dfce22957a8490d77c",
+  "scope": "Upstream full-firmware credit context; actual DSP inclusion must be distinguished from UI/hardware/measurement references",
+  "documents": [
+    {
+      "path": "LICENSE",
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/LICENSE"
+    },
+    {
+      "path": "LICENSES/Apache-2.0.txt",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/LICENSES/Apache-2.0.txt"
+    },
+    {
+      "path": "LICENSES/MIT.txt",
+      "sha256": "c1ca9c4c4b9efba08ec33b59eec81894db83c0c264739f44bfe8f9850ea321be",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/LICENSES/MIT.txt"
+    },
+    {
+      "path": "LICENSING.md",
+      "sha256": "bfb27e1cbc7e03c15ff0e5a8424ab47e6fea7656ccfabc73a64b26f713fe40a5",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/LICENSING.md"
+    },
+    {
+      "path": "README.md",
+      "sha256": "1b088bf877fd3beb1aab3979e2a0aeed93bfe331408fbe056034631601ca66da",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/README.md"
+    },
+    {
+      "path": "assets/fonts/Terminus-LICENSE.txt",
+      "sha256": "0a18785a674c0061da0fa1eb1bbdfe2d7db383b3f2e64c73454540e9cc3ae33d",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/assets/fonts/Terminus-LICENSE.txt"
+    },
+    {
+      "path": "move/vendor/LICENSE.schwung",
+      "sha256": "48030639717f60773196026dcbdc25c33c5f004b560f0c2284668428b5d78db7",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/move/vendor/LICENSE.schwung"
+    },
+    {
+      "path": "mpc/sdk/LICENSE",
+      "sha256": "b395c28b72e886a8fa4e7a7f317913750e53f5aad8937ef5dd348713a65a6ab9",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/mpc/sdk/LICENSE"
+    },
+    {
+      "path": "mpc/sdk/NOTICE.txt",
+      "sha256": "52ae82106459a015b7536fb1a7cda2477c77159239b37d0fd570e4a58004e989",
+      "source_url": "https://github.com/leonardoMirabal/frodhes/blob/5baa6f4425198e20b24429dfce22957a8490d77c/mpc/sdk/NOTICE.txt"
+    }
+  ]
+}

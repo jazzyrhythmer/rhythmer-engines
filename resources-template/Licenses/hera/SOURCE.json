@@ -1,0 +1,14 @@
+{
+  "id": "hera",
+  "repo": "charlesvestal/schwung-hera",
+  "tag": "v0.1.7",
+  "url": "https://github.com/charlesvestal/schwung-hera/releases/download/v0.1.7/hera-module.tar.gz",
+  "sha256": "2fbc5173a45fac1e62d613d84dbd1e2b33d1a5b8d273e693f9bc23da6b8fabbf",
+  "bytes": 275773,
+  "digest_checked": true,
+  "source_commit": "69773c9958f7414afc7a5b05df4c510ca1b15e36",
+  "dsp_sha256": "0b740146d1ec8f9ffe55e552f664a3bf8d57dfd617509bbf865c6ebb4608d71e",
+  "name": "Hera",
+  "parameters": 29,
+  "module_folder": "move-originals/hera/hera"
+}

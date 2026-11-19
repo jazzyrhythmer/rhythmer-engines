@@ -1,0 +1,24 @@
+{
+  "id": "mono2k",
+  "name": "MONO2K",
+  "repo": "https://github.com/InigoHernandez/mono2k.git",
+  "commit": "95d5763495d961f3ed225f5e4201328934ca4247",
+  "adapter": "mono2k_native.c",
+  "files": {
+    "firmware/src/m2k_factory.c": "e7e4344a03d534787d6e74c8bac8ca8023bb95ba24fdf90badcaf0ef1d11c210",
+    "firmware/src/m2k_gfx.c": "267b58b66a1dd616aaa289eb697c01179b27d6a5ad0981f3dad716dc2a0c29b8",
+    "firmware/src/m2k.h": "996e27832f2733044a9b88e5e800d503803d008a40ba4bc39ecbe6a09a0e9348",
+    "firmware/src/m2k_lib.c": "ce30d46433e0445400fb5a8188303f04e881235f50397c13ad03ec9faea26eb8",
+    "firmware/src/m2k_dsp.c": "dfb0f8189a5d730084b361b43c07887ba05f80ef3e33beb52d9cae1025f05dd3",
+    "firmware/src/m2k_fx.c": "d087b0fb4df273ad6a383fae04edc3078b41e0522767af004ecf113a56a1903a",
+    "firmware/src/m2k_ui.c": "8f8ed5483c6896f93d93823c2597930bd537bae618efc33b2df898ff9ac626ef",
+    "firmware/src/m2k_core.c": "6b3058a6c5120236763e055b02c8e3be017d463c6f4974ba3b392bca53148e25",
+    "firmware/src/m2k_grids.c": "321c30a1b2a3ff8b201d628c8af9e2b918e13abd8b9af673311215bf90c99dd4",
+    "firmware/src/m2k_proj.c": "9812fadc007f3b86ed850a9a297fbc9d7d51e8118a9206578df999aa42f49874",
+    "firmware/src/m2k_seq.c": "74ced1a84bf30450c5426f786174f2b70a232324fae64051880b5bca517b47dc",
+    "firmware/gen/m2k_fonts.h": "ae8709d87488967d5a5beb424e86b52317e113d67a1633e00b8cbca31c1e8d47",
+    "firmware/gen/m2k_waves64.h": "00eb5cb4e1fa5d1aaf56e5458d4e04842cc234f7e0643d737404f47eff227b05",
+    "firmware/gen/m2k_icons.h": "71b2d5d518bb7c3a792f5e88e9c2bba9ad194ef14766f7ee97270532a4b9524b",
+    "firmware/gen/m2k_tables.h": "06dc8a6244b288a89004a22c8bb918c5d672aa4da90d2648f0203330c2145be2"
+  }
+}

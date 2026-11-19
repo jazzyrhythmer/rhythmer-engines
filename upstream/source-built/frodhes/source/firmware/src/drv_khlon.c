@@ -1,0 +1,551 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* DRIVE TYPE 2, KHLON: the clean-blend overdrive. A gain stage (its feedback per AMOUNT) drives a pair of germanium
+ * diodes to ground through a coupling capacitor; a clean path (two clean feeds, one working against the gain pot) is
+ * summed with it in an inverting amp with an active treble control (TONE: cut .. boost). AMOUNT 1..127 is the GAIN
+ * knob from its minimum (a clean boost) to its maximum; TONE is the TREBLE knob.
+ *
+ * Per sample, loops over the block (the arithmetic of the private reference kernel, bit for bit:
+ * tests/py/test_drive_kernels_b.py), signals in volts Q20 (the bus x 32: 1.0 V for the engine's full scale):
+ *   O1   the gain stage, a biquad (transposed form II, 64-bit states)                 in -> kh_tmp
+ *   CL   the clean paths, first order                                                 in -> out
+ *   then, per AMOUNT row ("post", AMOUNT <= 125): the clipper (the +-4.5 V rail, the coupling capacitor's state, the
+ *        diodes' curve KH_GF) into kh_tmp, and the slot (its own path into the sum, first order) added into out;
+ *        ("pre", 126 and 127): the slot as the gain stage's third order, then the clipper into kh_tmp, added into out
+ *   POST the summing amp's pole x the treble control, a biquad; its b carry the level (per AMOUNT x per TONE: about
+ *        the loudness of the drive switched off) and the volts -> bus scale
+ * The clipper, from AMOUNT 77 (GAIN 0.6) up: first-order antiderivative anti-aliasing without a divide (the mean of
+ * the curve between the last input and this one: (F(e) - F(e1)) / (e - e1), F the exact integral of the interpolated
+ * curve; the quotient by count-leading-zeros, a reciprocal table and one 32 x 32 -> 64 multiply; |e - e1| < 2^12: the
+ * curve at the midpoint), then a fixed droop compensation w = v + 0.148 (v - v1) where its output enters the sum (the
+ * capacitor's state is fed the uncompensated v). Below AMOUNT 77 the plain curve on the same table (the reference's
+ * values bit for bit; its folding stays under -40 dB there). |e| stays below 9 V (the capacitor's state is a running
+ * mix of the clamped input): the table holds 0 .. 9.06 V, the curve is odd.
+ *
+ * Knobs: the rows glide one step a block. The post / pre change (between AMOUNT 125 and 126) is not a row step: the
+ * two modes' states do not map onto each other, so it dips through the dry signal, a block each: the wet fades out
+ * (5.8 ms), the new mode starts from rest and runs a block under the dry signal, then fades in (measured on the
+ * reference: what is left of its start is 55 dB or more under the signal's peak; a switch with the states kept
+ * clicked louder than the music). The fades ride on the last loop (POST, the blend fused in), so a dip block costs a
+ * few instructions a sample more than the others.
+ * Cost: tools/drive_insns.py counts the loops (pi32v2 -Os); DRV_US_KHLON is the longest block, a fade block of the dip,
+ * at ~1.6 us per instruction per sample. */
+#ifndef KH_AA                                   /* the anti-aliased clipper from KH_AA_A on (fxq-drive: on; 0 = the
+                                                 * plain curve at every AMOUNT, 0.9.8's budget) */
+#define KH_AA 1
+#endif
+#if KH_AA                                       /* AA: post 97, pre 101, a dip block 110 (DRV_US_MAX: drive.c;
+                                                 * 0.9.10: POST's Q8 output +1) */
+#define DRV_US_KHLON 177u
+#define KH_AA_FROM KH_AA_A
+#else            /* plain (pi32v2 -Os, the firmware build, per sample): post 69, pre 70, a dip block 80.5 (was 79 / 83 /
+                  * 96 counted the same way: O1+CL 25, clipper 21 (pre, adding into the sum: 24), slot 10, POST 13, the
+                  * dip's blend 10.5) */
+#define DRV_US_KHLON 129u
+#define KH_AA_FROM 127u
+#endif
+#define KH_M64(a, b) ((int64_t)(a) * (int64_t)(b))
+#ifndef KH_FN
+#define KH_FN static __attribute__((noinline))
+#endif
+
+static DRV_BSS int32_t kh_o1[5], kh_cl[3], kh_sl[3], kh_po[5];   /* the rows that run: b0 (b1 b2) a1 (a2), Q24, a negated */
+static DRV_BSS int64_t kh_so1[2], kh_spo[2], kh_scl, kh_ssl;      /* transposed form II states */
+static DRV_BSS int32_t kh_sc;                                     /* the coupling capacitor (Q20) */
+#define kh_tmp drv_scr.kh.tmp                                    /* the driven path; the sum while it dips: block */
+#define kh_u drv_scr.kh.u                                        /* scratch, shared (drive.c drv_scr: one TYPE a block) */
+static DRV_BSS const int32_t *kh_gf;                              /* the plain clipper's node at 0 V (KH_GF) */
+static DRV_BSS int32_t kh_e1, kh_F1, kh_v1;                       /* the AA clipper: the last e, F(e1), the last v */
+#if KH_AA
+static DRV_BSS uint8_t kh_aa;                                     /* the AA clipper runs (AMOUNT index >= KH_AA_A) */
+#else                    /* (0.9.8, flash: KH_AA_FROM is past the last row, so the AA passes and KH_RCP are left out) */
+#define kh_aa 0
+#endif
+static DRV_BSS int32_t kh_kc4, kh_rail;                           /* (in RAM: loaded into registers, as the reference) */
+static DRV_DATA uint8_t kh_ra = 0xFFu, kh_rt, kh_pre, kh_dip, kh_held;      /* rows (AMOUNT 0..126, TONE 0..128); 0xFF: none yet */
+/* each section's last two inputs and outputs (x1 x2 y1 y2), kept at the end of a block: when a row changes, the
+ * transposed states are rebuilt from them with the new coefficients, so a row change acts as in direct form I (the
+ * states are the signal's history, not partial sums of the old coefficients: no zipper) */
+static DRV_BSS int32_t kh_ho1[4], kh_hcl[4], kh_hsl[4], kh_hpo[4];
+
+static void kh_tdf2(int64_t *st, const int32_t *c, const int32_t *h)   /* biquad: b0 b1 b2 a1 a2 */
+{
+    st[0] = KH_M64(c[1], h[0]) + KH_M64(c[3], h[2]) + KH_M64(c[2], h[1]) + KH_M64(c[4], h[3]);
+    st[1] = KH_M64(c[2], h[0]) + KH_M64(c[4], h[2]);
+}
+static int64_t kh_tdf1(const int32_t *c, const int32_t *h)              /* first order: b0 b1 a1 */
+{
+    return KH_M64(c[1], h[0]) + KH_M64(c[2], h[2]);
+}
+
+static int32_t kh_unf(const uint32_t *r0, uint32_t i, uint32_t h)   /* a stored value (or the mean of two rows) */
+{
+    int32_t v = (int32_t)(r0[i] ^ 0x80000000u);    /* (stored with the sign bit flipped: drive_gen/khlon.py) */
+    return h ? (v + (int32_t)(r0[11u + i] ^ 0x80000000u)) >> 1 : v;
+}
+static uint32_t kh_mode_of(uint32_t ra) { return (uint32_t)(KH_AMAP[ra] >> 1) >= KH_PRE_ROW; }
+/* F at the carried e1 (once, when the AA rows start) */
+static int32_t kh_F(int32_t e)
+{
+    int32_t a = e < 0 ? -e : e, fr = a & ((1 << 14) - 1), g0, dg;
+    const int32_t *p = KH_GF + ((a >> 14) << 1);
+    g0 = p[0]; dg = p[2] - g0;
+    return p[1] + (int32_t)(KH_M64(fr, g0 + ((dg * fr) >> 15)) >> 13);
+}
+static void kh_load(void)                        /* the rows -> the coefficients (only when one changes) */
+{
+    uint32_t ga = KH_AMAP[kh_ra], gr = ga >> 1, gh = ga & 1u, tr = kh_rt >> 1, th = kh_rt & 1u, i;
+    const uint32_t *g = KH_G[gr], *t = KH_T[tr];
+    int32_t gs = gh ? (KH_GS[gr] + KH_GS[gr + 1]) >> 1 : KH_GS[gr];
+    int32_t lt = th ? (KH_LT[tr] + KH_LT[tr + 1]) >> 1 : KH_LT[tr];
+    int32_t s = (int32_t)(((int64_t)gs * lt + (1 << 13)) >> 14);   /* Q24 */
+    for (i = 0; i < 5; i++) kh_o1[i] = kh_unf(g, i, gh);
+    for (i = 0; i < 3; i++) { kh_cl[i] = kh_unf(g, 5 + i, gh); kh_sl[i] = kh_unf(g, 8 + i, gh); }
+    for (i = 0; i < 5; i++) {
+        int32_t v = (int32_t)(t[i] ^ 0x80000000u);
+        if (th) v = (v + (int32_t)(t[5 + i] ^ 0x80000000u)) >> 1;
+        kh_po[i] = i < 3 ? (int32_t)((KH_M64(v, s) + (1 << 15)) >> 16) : v;   /* (b x 2^8: POST's output Q8) */
+    }
+    kh_pre = (uint8_t)(gr >= KH_PRE_ROW);
+#if KH_AA
+    if (kh_ra >= KH_AA_FROM && !kh_aa) kh_F1 = kh_F(kh_e1);   /* (the AA rows start: F1 from the carried e1) */
+    kh_aa = kh_ra >= KH_AA_FROM;
+#endif
+    kh_gf = KH_GF; kh_kc4 = KH_KC4; kh_rail = KH_RAIL;
+}
+static void kh_rest(void)                        /* every state to rest */
+{
+    kh_so1[0] = kh_so1[1] = kh_spo[0] = kh_spo[1] = kh_scl = kh_ssl = 0;
+    kh_sc = kh_e1 = kh_F1 = kh_v1 = 0;              /* (F(0) = 0) */
+    memset(kh_ho1, 0, sizeof kh_ho1); memset(kh_hcl, 0, sizeof kh_hcl);
+    memset(kh_hsl, 0, sizeof kh_hsl); memset(kh_hpo, 0, sizeof kh_hpo);
+}
+static void kh_hist(int32_t *h, int32_t x1, int32_t x2, int32_t y1, int32_t y2)
+{
+    h[0] = x1; h[1] = x2; h[2] = y1; h[3] = y2;
+}
+static void drv_khlon_reset(void)
+{
+    kh_rest();
+    kh_ra = 0xFFu; kh_dip = kh_held = 0;                  /* the next run starts at the knobs' rows, no glide */
+}
+
+/* a first-order section, transposed form II; STORE(y) */
+#define KH_OP(c, st, in, IN_SH, STORE) do {                                                \
+        int32_t b0 = (c)[0], b1 = (c)[1], a1 = (c)[2];                                     \
+        int64_t s = (st);                                                                  \
+        for (i = 0; i < n; i++) {                                                          \
+            int32_t x = (in)[i] << (IN_SH), y;                                             \
+            y = (int32_t)((s + KH_M64(b0, x)) >> 24);                                      \
+            s = KH_M64(b1, x) + KH_M64(a1, y);                                             \
+            STORE;                                                                         \
+        }                                                                                  \
+        (st) = s; } while (0)
+/* the clipper's input: e = rail(x) - sc; its node pointer, fraction, g0, dg for |e| (the curve is odd) */
+#define KH_E(x)                                                                                 \
+            e = (x); e = e < nL ? nL : e; e = e > L ? L : e; e -= sc;                           \
+            a = e < 0 ? -e : e;                                                                 \
+            p = gf + ((a >> 14) << 1);                                                          \
+            fr = a & ((1 << 14) - 1);                                                           \
+            g0 = p[0]; dg = p[2] - g0;
+#define KH_AA_SF 12                                     /* F in Q28 = Q40 >> 12 */
+#ifndef KH_BETA_Q8
+#define KH_BETA_Q8 38                                   /* the droop compensation: 0.148 */
+#endif
+/* O1 and CL in one pass (the input read and scaled once): in -> kh_tmp (O1), u (CL); in may be u */
+KH_FN void kh_o1cl_pass(const int32_t *in, int32_t *u, uint32_t n)
+{
+    int32_t b0 = kh_o1[0], b1 = kh_o1[1], b2 = kh_o1[2], a1 = kh_o1[3], a2 = kh_o1[4];
+    int32_t c0 = kh_cl[0], c1 = kh_cl[1], ca = kh_cl[2], *t = kh_tmp;
+    int64_t s1 = kh_so1[0], s2 = kh_so1[1], sc = kh_scl;
+    const int32_t *e = in + n;
+    while (in < e) {
+        int32_t x = *in++ << 5, y, z;
+        y = (int32_t)((s1 + KH_M64(b0, x)) >> 24);
+        s1 = s2 + KH_M64(b1, x) + KH_M64(a1, y);
+        s2 = KH_M64(b2, x) + KH_M64(a2, y);
+        *t++ = y;
+        z = (int32_t)((sc + KH_M64(c0, x)) >> 24);
+        sc = KH_M64(c1, x) + KH_M64(ca, z);
+        *u++ = z;
+    }
+    kh_so1[0] = s1; kh_so1[1] = s2; kh_scl = sc;
+}
+/* the plain clipper (rows below KH_AA_A), on the signed node table KH_GFS (the curve over -9.06 .. 9.06 V, its
+ * negative half mirrored): e's cell and fraction come from e itself (two's complement: e = (e >> 14) 2^14 + (e &
+ * 16383)), no |e| and no sign select. g0, D are even (Q21 = 2 x the reference's Q20). For e >= 0 (g0 + (D fr) >> 14)
+ * >> 1 is the reference's G + floor(d fr / 2^14); for e < 0 the reference's rounding in its own (negative)
+ * coordinates (|e|'s cell, the bias 0x7ffe) comes out as the same expression in e's cell (D fr is even), bit for bit:
+ * checked for every e of +-9 V, and tests/py/test_drive_kernels_b.py.
+ * Keeps e1 current for a switch to the AA rows. KH_PV: one sample, e and v. */
+#define KH_PV(x)                                                                                   \
+            e = (x); e = e < nL ? nL : e; e = e > L ? L : e; e -= sc;                              \
+            p = gs + ((e >> 14) << 1); g0 = p[0];                                                  \
+            v = (g0 + (((p[2] - g0) * (e & ((1 << 14) - 1))) >> 14)) >> 1;                         \
+            sc += (int32_t)(KH_M64(e - v, kc4) >> 32);
+/* post: the clipper in place on kh_tmp */
+KH_FN void kh_clipv_pass(uint32_t n)
+{
+    const int32_t *gs = kh_gf;
+    int32_t sc = kh_sc, kc4 = kh_kc4, L = kh_rail, nL = -kh_rail, e = kh_e1, *t = kh_tmp, *te = kh_tmp + n;
+    while (t < te) {
+        int32_t g0, v;
+        const int32_t *p;
+        KH_PV(*t)
+        *t++ = v;
+    }
+    kh_sc = sc; kh_e1 = e;
+}
+/* pre: the clipper, its V_S added into u (kh_tmp keeps the input: the last two for the history) */
+KH_FN void kh_clipvadd_pass(int32_t *u, uint32_t n)
+{
+    const int32_t *gs = kh_gf, *t = kh_tmp;
+    int32_t sc = kh_sc, kc4 = kh_kc4, L = kh_rail, nL = -kh_rail, e = kh_e1, *ue = u + n;
+    while (u < ue) {
+        int32_t g0, v;
+        const int32_t *p;
+        KH_PV(*t++)
+        *u++ += v;
+    }
+    kh_sc = sc; kh_e1 = e;
+}
+/* the anti-aliased clipper (rows from KH_AA_A), V_S into kh_tmp: F(e) = F[k] + (fr (g0 + (dg fr) >> 15)) >> 13;
+ * |d| = |e - e1| >= 2^12: v = (F - F1) 2^12 / d by clz, KH_RCP and one 64-bit product; else g at the midpoint */
+KH_FN void kh_clipaa_pass(uint32_t n)
+{
+    const int32_t *gf = KH_GF;
+    const uint16_t *rc = KH_RCP;
+    int32_t sc = kh_sc, kc4 = kh_kc4, L = kh_rail, nL = -kh_rail, e1 = kh_e1, F1 = kh_F1;
+    uint32_t i;
+    for (i = 0; i < n; i++) {
+        int32_t e, a, fr, g0, dg, pr, F, d, v;
+        uint32_t ad;
+        const int32_t *p;
+        KH_E(kh_tmp[i])
+        pr = dg * fr;
+        F = p[1] + (int32_t)(KH_M64(fr, g0 + (pr >> 15)) >> 13);
+        d = e - e1;
+        ad = (uint32_t)(d < 0 ? -d : d);
+        if (__builtin_expect(ad >= (1u << KH_AA_SF), 1)) {
+            int nz = __builtin_clz(ad);
+            uint32_t r = rc[((ad << nz) >> (32 - 11)) - (1u << 10)];   /* the top bit is set: 1024..2047 */
+            int32_t q = (int32_t)(KH_M64(F - F1, r) >> (47 - KH_AA_SF - nz));
+            v = d < 0 ? -q : q;
+        } else {
+            int32_t gm = g0 + (pr >> 14);
+            v = ((e < 0 ? -gm : gm) - ((dg * d) >> 15)) >> 1;
+        }
+        e1 = e; F1 = F;
+        sc += (int32_t)(KH_M64(e - v, kc4) >> 32);
+        kh_tmp[i] = v;
+    }
+    kh_sc = sc; kh_e1 = e1; kh_F1 = F1;
+}
+KH_FN void kh_sladd_pass(int32_t *u, uint32_t n) /* post: u += the slot (V_S); on pointers */
+{
+    int32_t b0 = kh_sl[0], b1 = kh_sl[1], a1 = kh_sl[2];
+    int64_t s = kh_ssl;
+    const int32_t *t = kh_tmp, *te = kh_tmp + n;
+    while (t < te) {
+        int32_t x = *t++, y;
+        y = (int32_t)((s + KH_M64(b0, x)) >> 24);
+        s = KH_M64(b1, x) + KH_M64(a1, y);
+        *u++ += y;
+    }
+    kh_ssl = s;
+}
+KH_FN void kh_sl_pass(uint32_t n)                /* pre: the third order, in place */
+{
+    uint32_t i;
+    KH_OP(kh_sl, kh_ssl, kh_tmp, 0, kh_tmp[i] = y);
+}
+/* the AA rows' droop compensation w = v + beta (v - v1), fused where V_S enters the sum: post mode u += slot(w) */
+KH_FN void kh_slfadd_pass(int32_t *u, uint32_t n)
+{
+    int32_t b0 = kh_sl[0], b1 = kh_sl[1], a1 = kh_sl[2], v1 = kh_v1;
+    int64_t s = kh_ssl;
+    uint32_t i;
+    for (i = 0; i < n; i++) {
+        int32_t v = kh_tmp[i], x = v + (((v - v1) * KH_BETA_Q8) >> 8), y;
+        v1 = v;
+        y = (int32_t)((s + KH_M64(b0, x)) >> 24);
+        s = KH_M64(b1, x) + KH_M64(a1, y);
+        u[i] += y;
+    }
+    kh_ssl = s; kh_v1 = v1;
+}
+/* pre mode: u += w */
+KH_FN void kh_firadd_pass(int32_t *u, uint32_t n)
+{
+    int32_t v1 = kh_v1;
+    uint32_t i;
+    for (i = 0; i < n; i++) {
+        int32_t v = kh_tmp[i];
+        u[i] += v + (((v - v1) * KH_BETA_Q8) >> 8);
+        v1 = v;
+    }
+    kh_v1 = v1;
+}
+/* POST, in place, transposed form II. Its output carries 8 bits below the bus's LSB through the recursion (b x 2^8:
+ * kh_load), cut to the bus on the way out (0.9.10; 14 instructions a sample, was 13): with the output floored to the
+ * bus in the loop, its rounding error went round the poles (a DC gain of ~95 at GAIN 20) and a quiet note (below ~-60
+ * dBFS in) sat in a dead band or came out at H3 -5..-15 dB. The last two outputs (Q8) are POST's history (kh_hpo). */
+#define KH_PO1(i) do {                                                                                      \
+        int32_t x = u[i];                                                                                   \
+        int64_t t = s1 + KH_M64(b0, x);                                                                     \
+        y = (int32_t)(t >> 24);                                                                             \
+        u[i] = (int32_t)(t >> 32);                      /* (y >> 8: the sum's high word, no shift) */       \
+        s1 = s2 + KH_M64(b1, x) + KH_M64(a1, y);                                                            \
+        s2 = KH_M64(b2, x) + KH_M64(a2, y); } while (0)
+KH_FN void kh_post_pass(int32_t *u, uint32_t n)
+{
+    int32_t b0 = kh_po[0], b1 = kh_po[1], b2 = kh_po[2], a1 = kh_po[3], a2 = kh_po[4], y;
+    int64_t s1 = kh_spo[0], s2 = kh_spo[1];
+    uint32_t i;
+    for (i = 0; i < n - 1u; i++) KH_PO1(i);
+    kh_hpo[3] = y;                               /* (the last sample apart: the history without a move a sample) */
+    KH_PO1(i);
+    kh_spo[0] = s1; kh_spo[1] = s2; kh_hpo[2] = y;
+}
+/* a dip's fade block: POST into u, then the blend over the dry signal, out = dry + (POST(u) - dry) w / 256, w = 1..n
+ * (up: fading in) or n - 1..0 (fading out) a sample (a block of DRV_BLK = 256 ends at 0 or 1; a smooth ramp: one
+ * stepped every 4 samples is heard as highs by the click test), the product 32-bit (|POST(u) - dry| < 2^23). The
+ * same pass whatever the clipper (plain or anti-aliased): a fade block costs POST + the blend, two samples a pass. */
+/* the dip's dry at the wet's level (0.9.6, #5: the wet and the dry differ by a few dB, so the 17 ms dip through the
+ * plain dry was a level jump of 3.9 dB in the control sweep's windows): the dry x kh_dg (Q12, 1/4 .. 4), the RMS
+ * ratio of the wet to the dry over the dip's first block (every 4th sample), taken there (in log2: fx.c log2_q12 /
+ * exp2_q16, no square root or divide) */
+static DRV_BSS int32_t kh_dg;
+static int32_t log2_q12(uint32_t x);
+static int32_t exp2_q16(int32_t g);
+static void kh_dip_gain(const int32_t *dry, const int32_t *y, uint32_t n)
+{
+    uint64_t ew = 1, ed = 1;
+    uint32_t i;
+    int32_t g;
+    for (i = 0; i < n; i += 4u) { ew += (uint64_t)((int64_t)y[i] * y[i]); ed += (uint64_t)((int64_t)dry[i] * dry[i]); }   /* (every 4th sample: the CPU of a dip block) */
+    while ((ew | ed) >> 32) { ew >>= 1; ed >>= 1; }
+    g = (log2_q12((uint32_t)ew) - log2_q12((uint32_t)ed)) >> 1;   /* log2 of the RMS ratio, Q12 */
+    kh_dg = exp2_q16(g < -8192 ? -8192 : g > 8192 ? 8192 : g) >> 4;           /* x 1/4 .. 4, Q12 */
+}
+#if FR_CHUNK
+/* kh_dip_gain from energies summed every 4th sample (two cores: drv_khlon_run below) */
+static void kh_dg_of(uint64_t ew, uint64_t ed)
+{
+    int32_t g;
+    ew++; ed++;
+    while ((ew | ed) >> 32) { ew >>= 1; ed >>= 1; }
+    g = (log2_q12((uint32_t)ew) - log2_q12((uint32_t)ed)) >> 1;
+    kh_dg = exp2_q16(g < -8192 ? -8192 : g > 8192 ? 8192 : g) >> 4;
+}
+#endif
+static inline int32_t kh_dry(int32_t d) { return (int32_t)(((int64_t)d * kh_dg) >> 12); }
+KH_FN void kh_fade_pass(const int32_t *dry, const int32_t *y, int32_t *out, uint32_t n, int32_t w, int32_t dw)
+{
+    const int32_t *e = dry + (n & ~1u);
+    while (dry < e) {
+        int32_t d0 = kh_dry(dry[0]), d1 = kh_dry(dry[1]);
+        out[0] = d0 + (((y[0] - d0) * w) >> 8);
+        out[1] = d1 + (((y[1] - d1) * (w + dw)) >> 8);
+        dry += 2; y += 2; out += 2; w += 2 * dw;
+    }
+    if (n & 1u) out[0] = kh_dry(dry[0]) + (((y[0] - kh_dry(dry[0])) * w) >> 8);
+}
+static void kh_fade(const int32_t *in, int32_t *u, int32_t *out, uint32_t n, uint32_t up)
+{
+    kh_post_pass(u, n);
+    if (up) kh_fade_pass(in, u, out, n, 1, 1);
+    else { kh_dip_gain(in, u, n); kh_fade_pass(in, u, out, n, (int32_t)n - 1, -1); }
+}
+
+#if FR_CHUNK
+/* drv_khlon_run for a chunk (fx.c fxc_o / fxc_e): the rows and the dip's step at the first chunk, the passes on the
+ * chunk (kh_tmp: the chunk's scratch from its start), the rows' histories and the silence test at the last. The dip's
+ * dry gain (kh_dg, one core: from the dip's first block, kh_dip_gain) comes from the block before the dip and the
+ * dip's first chunk: the block's later samples are not rendered yet when its fade-out starts. The one deviation from
+ * the one-core build: the 17 ms dip's dry level, 1.3 dB on average (3.5 at most) in build/c1sub/khdip.py's 24 dips;
+ * no click (the difference is the dry's fade, smooth; click ratios as one core's within 0.6) */
+static void drv_khlon_run(const int32_t *in, int32_t *out, uint32_t n, const drv_ctl_t *c)
+{
+    static uint32_t ph, zq;
+    static int64_t q0[7];
+    static int32_t x1, x2, z0;
+    static uint64_t pw, pd, cw, cd;                 /* the dip's gain: the energies of the block before, this block's */
+    uint32_t i, o = fxc_o, k = fxc_e - o, last = FXC_Z;
+    int32_t *u, cl1 = 0, cl2 = 0;
+    const int32_t *ip = in + o;
+    int32_t *op = out + o;
+    if (FXC_1) {
+        uint32_t ta = (uint32_t)(c->amount - 1), tt = (uint32_t)(c->tone + ((c->tone + 1) >> 7));
+        uint32_t tpre = kh_mode_of(ta);
+        ph = kh_dip;
+        if (kh_ra == 0xFFu) { kh_ra = (uint8_t)ta; kh_rt = (uint8_t)tt; kh_load(); ph = 0; }
+        else {
+            uint32_t ra = kh_ra, rt = kh_rt;
+#ifdef KH_DIP_TEST_OFF
+            if (tpre != kh_pre) ph = 2;
+#else
+            if (!ph && tpre != kh_pre) ph = 1;
+#endif
+            if (ph == 2) {
+                ra = ta; rt = tt; kh_rest();
+                kh_ra = (uint8_t)ra; kh_rt = (uint8_t)rt; kh_load();
+            } else if (!ph && !kh_held) {
+                if (ra != ta) {
+                    uint32_t nr = ra < ta ? ra + 1u : ra - 1u;
+                    if (kh_mode_of(nr) == kh_pre) ra = nr;
+                }
+                rt = rt < tt ? rt + 1u : rt > tt ? rt - 1u : rt;
+                if (ra != kh_ra || rt != kh_rt) {
+                    kh_ra = (uint8_t)ra; kh_rt = (uint8_t)rt; kh_load();
+#ifndef KH_REBUILD_TEST_OFF
+                    kh_tdf2(kh_so1, kh_o1, kh_ho1); kh_scl = kh_tdf1(kh_cl, kh_hcl);
+                    kh_ssl = kh_tdf1(kh_sl, kh_hsl); kh_tdf2(kh_spo, kh_po, kh_hpo);
+#endif
+                }
+            }
+        }
+#ifdef KH_DIP_TEST_OFF
+        ph = 0;
+#endif
+        zq = !ph && !kh_held;                       /* (the silence test's states: the block's start) */
+        q0[0] = kh_so1[0]; q0[1] = kh_so1[1]; q0[2] = kh_spo[0]; q0[3] = kh_spo[1];
+        q0[4] = kh_scl; q0[5] = kh_ssl; q0[6] = kh_sc;
+        z0 = in[0];
+        pw = cw; pd = cd; cw = cd = 0;
+    }
+    for (i = 0; i < k; i += 4u) cd += (uint64_t)((int64_t)ip[i] * ip[i]);   /* (the dry: before the passes) */
+    if (last) { x1 = in[n - 1] << 5; x2 = in[n - 2] << 5; }   /* (in may be out: before the passes) */
+    u = ph ? kh_u + o : op;
+    kh_o1cl_pass(ip, u, k);
+    if (last) { kh_hist(kh_ho1, x1, x2, kh_tmp[k - 1], kh_tmp[k - 2]); kh_hist(kh_hcl, x1, x2, cl1 = u[k - 1], cl2 = u[k - 2]); }
+    if (!kh_pre) {
+        int32_t w1, w2;
+        if (!kh_aa) {
+            kh_clipv_pass(k); kh_sladd_pass(u, k);
+            if (last) { kh_v1 = w1 = kh_tmp[k - 1]; w2 = kh_tmp[k - 2]; }
+            else kh_v1 = kh_tmp[k - 1];
+        } else {
+            kh_clipaa_pass(k); kh_slfadd_pass(u, k);
+            w1 = kh_tmp[k - 1] + (((kh_tmp[k - 1] - kh_tmp[k - 2]) * KH_BETA_Q8) >> 8);
+            w2 = kh_tmp[k - 2] + (((kh_tmp[k - 2] - kh_tmp[k - 3]) * KH_BETA_Q8) >> 8);
+        }
+        if (last) kh_hist(kh_hsl, w1, w2, u[k - 1] - cl1, u[k - 2] - cl2);
+    } else {
+        kh_sl_pass(k);
+        if (last) kh_hist(kh_hsl, kh_ho1[2], kh_ho1[3], kh_tmp[k - 1], kh_tmp[k - 2]);
+        if (kh_aa) { kh_clipaa_pass(k); kh_firadd_pass(u, k); }
+        else kh_clipvadd_pass(u, k);
+    }
+    if (last) { kh_hpo[0] = u[k - 1]; kh_hpo[1] = u[k - 2]; }
+    kh_post_pass(u, k);
+    for (i = 0; i < k; i += 4u) cw += (uint64_t)((int64_t)u[i] * u[i]);
+    if (ph == 3) kh_fade_pass(ip, u, op, k, 1 + (int32_t)o, 1);
+    else if (ph == 1) {
+#ifdef C1_EST_LOG
+        if (!o) printf("C1EST khlon %u\n", c1_est_blk);
+#endif
+        if (!o && last) kh_dip_gain(ip, u, k);   /* (the block whole, one chunk: as one core) */
+        else if (!o) kh_dg_of(pw + cw, pd + cd);       /* (the block before and this first chunk: 288 samples at C1_SUB 8) */
+        kh_fade_pass(ip, u, op, k, (int32_t)(n - 1u - o), -1);
+    } else if (ph == 2)
+        for (i = 0; i < k; i++) op[i] = kh_dry(ip[i]);
+    if (!last) return;
+    if (ph) ph = ph < 3u ? ph + 1u : 0u;
+    /* (kh_hpo[2], [3]: POST's Q8 history, kh_post_pass's on the last chunk, as one core) */
+    kh_held = u != op;
+    kh_dip = (uint8_t)ph;
+    if (zq && !(x1 | x2 | z0) && q0[0] == kh_so1[0] && q0[1] == kh_so1[1] && q0[2] == kh_spo[0] && q0[3] == kh_spo[1] &&
+        q0[4] == kh_scl && q0[5] == kh_ssl && q0[6] == kh_sc && (kh_sc | kh_scl | kh_ssl | kh_so1[0] |
+        kh_so1[1] | kh_spo[0] | kh_spo[1]))
+        kh_rest();
+}
+#else
+/* the wet signal of the block, in -> out (out may be in); n >= 3 */
+static void drv_khlon_run(const int32_t *in, int32_t *out, uint32_t n, const drv_ctl_t *c)
+{
+    uint32_t ta = (uint32_t)(c->amount - 1), tt = (uint32_t)(c->tone + ((c->tone + 1) >> 7));   /* 0..126, 0..128 */
+    uint32_t tpre = kh_mode_of(ta), ph = kh_dip;
+    int32_t *u = out, cl1, cl2, x1, x2;
+    int64_t q0[7];                               /* (the states at a silent block's start) */
+    uint32_t q;
+    if (kh_ra == 0xFFu) { kh_ra = (uint8_t)ta; kh_rt = (uint8_t)tt; kh_load(); ph = 0; }
+    else {
+        uint32_t ra = kh_ra, rt = kh_rt;
+#ifdef KH_DIP_TEST_OFF                            /* (a test build: the mode change without the dip) */
+        if (tpre != kh_pre) ph = 2;
+#else
+        if (!ph && tpre != kh_pre) ph = 1;       /* the other mode: the dip (1 fade out, 2 under the dry, 3 fade in) */
+#endif
+        if (ph == 2) {                           /* the dip's floor: the mode the knob is in, from rest */
+            ra = ta; rt = tt; kh_rest();
+            kh_ra = (uint8_t)ra; kh_rt = (uint8_t)rt; kh_load();
+        } else if (!ph && !kh_held) {            /* one row a block, inside the mode that runs (held while it dips, and
+                                                  * the block after: POST's history is whole again) */
+            if (ra != ta) {
+                uint32_t nr = ra < ta ? ra + 1u : ra - 1u;
+                if (kh_mode_of(nr) == kh_pre) ra = nr;
+            }
+            rt = rt < tt ? rt + 1u : rt > tt ? rt - 1u : rt;
+            if (ra != kh_ra || rt != kh_rt) {    /* new coefficients; the states from the history */
+                kh_ra = (uint8_t)ra; kh_rt = (uint8_t)rt; kh_load();
+#ifndef KH_REBUILD_TEST_OFF                       /* (a test build: the states kept as they are) */
+                kh_tdf2(kh_so1, kh_o1, kh_ho1); kh_scl = kh_tdf1(kh_cl, kh_hcl);
+                kh_ssl = kh_tdf1(kh_sl, kh_hsl); kh_tdf2(kh_spo, kh_po, kh_hpo);
+#endif
+            }
+        }
+    }
+#ifdef KH_DIP_TEST_OFF
+    ph = 0;
+#endif
+    if (ph) u = kh_u;                            /* (the dry signal stays in in) */
+    x1 = in[n - 1] << 5; x2 = in[n - 2] << 5;      /* (in may be u: overwritten) */
+    /* silence (0.9.8, the residual after a panic): on zero input the rounding (every >> floors) leaves fixed points
+     * that are not 0, the coupling capacitor's update ((e - v) kc4 >> 32 is 0 for a small positive e - v: its state
+     * stops at a few hundred LSB below 0, so the diodes see a constant e and give a constant v) and the sections' own
+     * (y = s >> 24 stays at -1 or a few LSB): a DC of ~44 LSB out, for ever, kept open by the silence gate. A block
+     * that starts and ends on 0 in, outside a dip, with every state where it started is that fixed point: to rest
+     * (exact 0 from the next block). Once a block, no per-sample work; music never leaves the states unmoved */
+    q = !(x1 | x2 | in[0]) && !ph && !kh_held;
+    q0[0] = kh_so1[0]; q0[1] = kh_so1[1]; q0[2] = kh_spo[0]; q0[3] = kh_spo[1];   /* (every block: 7 copies, and no
+                                                                                    * maybe-uninitialised q0, K8) */
+    q0[4] = kh_scl; q0[5] = kh_ssl; q0[6] = kh_sc;
+    kh_o1cl_pass(in, u, n);
+    kh_hist(kh_ho1, x1, x2, kh_tmp[n - 1], kh_tmp[n - 2]);
+    kh_hist(kh_hcl, x1, x2, cl1 = u[n - 1], cl2 = u[n - 2]);
+    if (!kh_pre) {
+        int32_t w1, w2;
+        if (!kh_aa) {
+            kh_clipv_pass(n); kh_sladd_pass(u, n);
+            kh_v1 = w1 = kh_tmp[n - 1]; w2 = kh_tmp[n - 2];
+        } else {
+            kh_clipaa_pass(n); kh_slfadd_pass(u, n);
+            w1 = kh_tmp[n - 1] + (((kh_tmp[n - 1] - kh_tmp[n - 2]) * KH_BETA_Q8) >> 8);
+            w2 = kh_tmp[n - 2] + (((kh_tmp[n - 2] - kh_tmp[n - 3]) * KH_BETA_Q8) >> 8);
+        }
+        kh_hist(kh_hsl, w1, w2, u[n - 1] - cl1, u[n - 2] - cl2);
+    } else {
+        kh_sl_pass(n);
+        kh_hist(kh_hsl, kh_ho1[2], kh_ho1[3], kh_tmp[n - 1], kh_tmp[n - 2]);
+        if (kh_aa) { kh_clipaa_pass(n); kh_firadd_pass(u, n); }
+        else kh_clipvadd_pass(u, n);
+    }
+    kh_hpo[0] = u[n - 1]; kh_hpo[1] = u[n - 2];
+    if (!ph) kh_post_pass(u, n);
+    else {
+        if (ph != 2) kh_fade(in, u, out, n, ph == 3);
+        else {
+            uint32_t i;
+            kh_post_pass(u, n);
+            for (i = 0; i < n; i++) out[i] = kh_dry(in[i]);   /* (the dry at the wet's level) */
+        }
+        ph = ph < 3u ? ph + 1u : 0u;
+    }
+    kh_held = u != out;
+    kh_dip = (uint8_t)ph;
+    if (q && q0[0] == kh_so1[0] && q0[1] == kh_so1[1] && q0[2] == kh_spo[0] && q0[3] == kh_spo[1] &&
+        q0[4] == kh_scl && q0[5] == kh_ssl && q0[6] == kh_sc && (kh_sc | kh_scl | kh_ssl | kh_so1[0] |
+        kh_so1[1] | kh_spo[0] | kh_spo[1]))
+        kh_rest();                               /* (the stuck fixed point: silence, a block from now) */
+}
+#endif

@@ -1,0 +1,112 @@
+# SPDX-License-Identifier: GPL-3.0-only
+"""Gate B (IMPLEMENTATION-v3 S18, check C7): the C engine, run on the host, must match the float golden model
+(tools/rhodes_model.py) note for note: residual energy <= -60 dB of the signal.
+
+Each case plays one note over USB-MIDI into the host build of the firmware (build/host/frodhes) and the same note
+through the golden model with the same generated parameters (docs/model/data/rhodes_spec.json). The host build here
+has -DRH_NO_S4: S4 (amplitude -> pitch in the bass, rhodes.c rh_s4_e) is a deliberate nonlinearity the golden model
+does not have (it moves keys 21-47 a few cents at the strike: -25 dB residual at key 28 v100); tests/py/
+test_rh_amp_pitch.py checks S4 against this same reference. 2026-11-08 (0.9.10): also without the strike-time output
+gains (-DRH_NO_DRV_MK: the pickup drive's level make-up; -DRH_NO_DYN: the dynamics stage), a gain per note the model
+does not apply, and without the harmonic decay glide (-DRH_NO_HD: the offset moving after 0.4 s; its own tests in
+test_rh_velmap / check0910). rc-0910: also without the clean top (-DRH_NO_TOP: 1fe0c0af's swing cut above a knee per
+key, with its gain back; tests/py/test_rhodes_top.py). The physics the model has (the modes, the drive's swing, the pickup) is all compared."""
+import json
+import os
+import subprocess
+import sys
+import wave
+
+import numpy as np
+import pytest
+
+import hostrun  # noqa: E402  (tests/py: the per-worker render paths)
+
+ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import dry_dist  # noqa: E402
+import rhodes_model as gm  # noqa: E402
+
+BIN = os.path.join(ROOT, "build", "gate_b", "frodhes")   # the host build without S4 (exe())
+SPEC = json.load(open(os.path.join(ROOT, "docs", "model", "data", "rhodes_spec.json")))
+KEYS = {k["midi"]: k for k in SPEC["keys"]}
+
+
+def exe():
+    def make(p):
+        subprocess.run(["cc", "-O2", "-Wall", "-Wno-unused-function", "-DDINGHY_HOST", '-DAPP_VER="dev"', "-DRH_NO_S4",
+                        "-DRH_NO_DRV_MK", "-DRH_NO_DYN", "-DRH_NO_HD", "-DRH_NO_TOP", "-DRH_ATK_A=0u",   # (0.9.10: the output-gain stages, the attack lift and the glide)
+                        "-I" + os.path.join(ROOT, "firmware", "src"), "-I" + os.path.join(ROOT, "firmware", "gen"),
+                        "-o", p, os.path.join(ROOT, "firmware", "src", "frodhes.c"), "-lm"], check=True)
+    return hostrun.once(BIN, make)
+
+
+def c_render(note, vel, dur_ms, off_ms=None, tag="gb"):
+    out = hostrun.out(f"{tag}-{note}-{vel}")
+    scr = out + ".txt"
+    with open(scr, "w") as f:
+        f.writelines(ln + "\n" for ln in dry_dist.type_base_lines(50))   # the voicing at its defaults, not F01's
+        f.write("50 midi 0xB0 119 127\n")                 # developer: bypass the effects, test the voice
+        f.write("50 midi 0xB0 104 0\n")                   # NOISE off: the golden model has no thump / felt noise
+        f.write(f"100 midi 0x90 {note} {vel}\n")
+        if off_ms:
+            f.write(f"{off_ms} midi 0x80 {note} 0\n")
+        f.write(f"{dur_ms} end\n")
+    subprocess.run([exe(), out, scr], check=True, capture_output=True)
+    w = wave.open(out + ".wav")
+    x = np.frombuffer(w.readframes(w.getnframes()), dtype="<i2")[0::2].astype(float)
+    return x
+
+
+def gold(note, vel, dur_s, off_s=None):
+    k = KEYS[note]
+    return gm.render_batch([k], SPEC["pickup"], [vel], dur_s, off_at=off_s,
+                           gains=[k["gain"]])[0]
+
+
+def residual_db(c, g):
+    """Align by cross-correlation (the C note starts at the next ISR block after its MIDI event) and return the
+    residual energy relative to the golden signal, in dB."""
+    n = min(len(g), len(c) - 4096)
+    first = int(np.argmax(np.abs(c) > 0))           # the C note's first non-zero sample
+    start = max(first - 64, 0)
+    lags = range(start, start + 128)
+    errs = []
+    L = min(n, len(c) - start - 128)
+    for lag in lags:
+        d = c[lag:lag + L] - g[:L]
+        errs.append(np.sum(d * d))
+    i = int(np.argmin(errs))
+    return 10 * np.log10(errs[i] / np.sum(g[:L] ** 2)), lags[i], float(np.sqrt(errs[i] / L))
+
+
+@pytest.fixture(scope="module", autouse=True)
+def host_build():
+    subprocess.run(["make", "-C", ROOT, "build/host/frodhes"], check=True, capture_output=True)
+
+
+@pytest.mark.parametrize("note,vel", [(28, 100), (45, 64), (52, 100), (55, 100), (57, 100), (60, 100), (69, 127),
+                                      (84, 40), (96, 100)])
+def test_c_matches_golden_held(note, vel):
+    # (52, 55, 57: their O1 force gain fell in the chip-ROM window and was clipped to its edge, 0.76-0.98 of its
+    # value, until gen_rhodes.rom_window_b: -53 dB here)
+    c = c_render(note, vel, 1600)
+    g = gold(note, vel, 1.2)
+    r, lag, rms = residual_db(c, g)
+    # -60 dB re the signal, or (quiet notes) a residual within 1 LSB RMS: the 16-bit output's own rounding (the
+    # 0.6 velocity calibration made key 84 at v = 40 a very quiet note: 0.72 LSB of rounding, -44 dB re it)
+    assert r <= -60.0 or rms <= 1.0, (note, vel, r, rms, lag)
+
+
+@pytest.mark.parametrize("note", [40, 72])
+def test_c_matches_golden_with_damper(note):
+    c = c_render(note, 100, 1600, off_ms=700, tag="gbd")
+    # the note-off reaches the engine at the first block after 700 ms; the golden model takes it relative to the
+    # note start, so measure where the C note started and place the damper at the same offset
+    nz = int(np.argmax(np.abs(c) > 0))
+    start_ms = 100.0
+    blk = 256 / 44.1
+    off_rel = (np.ceil((700.0) / blk) * blk - np.ceil(start_ms / blk) * blk) / 1000.0
+    g = gold(note, 100, 1.2, off_s=off_rel)
+    r, _, rms = residual_db(c, g)
+    assert r <= -50.0 or rms <= 0.5, (note, r, rms, nz)

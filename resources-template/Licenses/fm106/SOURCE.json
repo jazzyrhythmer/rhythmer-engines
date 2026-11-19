@@ -1,0 +1,23 @@
+{
+  "id": "fm106",
+  "name": "FM-106",
+  "repo": "https://github.com/PatttF/fm-106.git",
+  "commit": "b795c3d9431c4cd552d5951f70b549eeff5c288d",
+  "adapter": "fm106_native.c",
+  "submodules": [],
+  "files": {
+    "firmware/src/fm106_adsr.h": "a045fd349b84548f970ec1d6e52fb5e13254fba4d777806b2191b9126e911547",
+    "firmware/src/fm106_presets.h": "fe105a3007307fea9dbe3159e628d79d38d222853898343fcdae32bb2fd7ef3e",
+    "firmware/src/fm106_tables.h": "29de75b48c78493e929e7da7ab788892c1b11b28d4f89d2ff7d3f2167c257622",
+    "firmware/src/fm106_osc.h": "a5d22bcb6ba3ef5c29b0544d9e77b025c8e8df2b019dc2cc17ac9459fa6b71cc",
+    "firmware/src/fm106_chorus.h": "7ee897578214d3a7618a4e6b4b5647e14cba0830ecdbb575c3bfe0981af687fe",
+    "firmware/src/fm106_hann_table.h": "49c7a4bee1526a1ad9b3735475530af1ece9b4d19bfea6d1ed06ff73c3050fdd",
+    "firmware/src/fm106_sysex.h": "1b6f03ea78d2cf6b1cedf6076f0abc1cf28578a7eef8646186d045de0761b5fa",
+    "firmware/src/fm106_fx.h": "daa0e433ca07d4b4dcee6ee23bf419212693ca64554f98fd152d2b10f12f93fc",
+    "firmware/src/fm106_engine.h": "304dad22c8b002b9a4ea0e395b4b2ad2210275261a938ac2ed55cd8a5164d929",
+    "firmware/src/fm106_reverb.h": "aab639389b9912afdcca7c9d88aefaa2b8d752a442c4dfb1866fbe42e272e339",
+    "firmware/src/fm106_seq.h": "9b73cb2bb81009716e7f2c27572ffc23812dc3d003810e04a341f30699d8f687",
+    "firmware/src/fm106_vcf.h": "f284d3453ea48a55682317a861a6071c6cb48cc985dc88046d81c30924da23d6",
+    "firmware/src/fm106_fx_tables.h": "ee17a4de4e8f9e8b9b43d5f62ddaa7147c9ac76cfbf30872152fdfbfaeab6c3f"
+  }
+}

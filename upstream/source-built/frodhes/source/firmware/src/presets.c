@@ -1,0 +1,581 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* Frodhes presets (IMPLEMENTATION-v3 §10.6, §12): 19 factory presets (const; F13 / F14 VIBES, F15 / F16 MARIMBA, the
+ * rest Rhodes; 0.9.10 reordered them: see PR_FDATA) and 16 user presets in a bank of two
+ * flash sectors written alternately (A 0x97000, B 0x98000): erase the older sector, write the records, the header
+ * last; load picks the valid copy with the higher sequence number, so a cut-off save never loses the bank.
+ *
+ *   PRESETS encoder   browse F01..F19, U01..U16; loads 400 ms after the last detent (the edit goes to undo)
+ *   SAVE              open the save mode: PRESETS / K1 pick the slot, SAVE again saves (when quiet), HOME cancels
+ *   SAVE held 700 ms  undo / redo the last load
+ *   MIDI PC           0..15 -> F01..F16, 16..31 -> U01..U16 (as before 0.9.5), 32..34 -> F17..F19 (preset_of_pc) */
+#include "fr_cold.h"   /* FR_COLD (the cold code: minsize on the firmware) */
+
+#define PR_NF 19u                               /* 12 Rhodes (F01..F12), the bar types' F13..F16, then F17..F19
+                                                 * Rhodes (0.9.5: the starters U10..U12 before) */
+#define PR_NU 16u
+_Static_assert(PR_NF == PR_NF_UI && PR_NF + PR_NU == PR_NALL_UI && PR_NF == PR_NF_SET, "ui.c / params.c preset counts");
+_Static_assert(PR_NF >= 16u && PR_NF <= 16u + 96u, "program changes 0..15: F01..F16, 16..31: U01..U16, 32..: F17..");
+/* 0.9.6: the user presets are the store's record tail (set_store.c: with the settings, one CRC, two copies). The bank
+ * of the versions before (two sectors, PR_BANK_A / B = frodhes_store.h OLD_PR_A / B) is only read, once: the first
+ * boot's migration (frodhes.c app_main) */
+#define PR_BANK_A OLD_PR_A
+#define PR_BANK_B OLD_PR_B
+#define PR_MAGIC 0x42505246u                    /* "FRPB" */
+
+typedef struct { uint8_t ver, np, used, rsv; char name[12]; uint8_t p[P_SLOTS]; } preset_t;   /* v3: 64 parameters and
+                                                * 16 spare bytes (zero) up to the EQ, which took them (ids 64..79); np
+                                                * says how many a record holds: the ids from np on load their defaults */
+_Static_assert(sizeof(preset_t) == 96, "preset record is 96 B (v3: 80 parameters)");
+typedef struct { uint8_t ver, np, used, rsv; char name[12]; uint8_t p[48]; } preset_v2_t;     /* 0.4 .. 0.9.2 */
+_Static_assert(sizeof(preset_v2_t) == 64, "v2 preset record is 64 B");
+typedef struct { uint8_t ver, np, used, rsv; char name[12]; uint8_t p[32]; } preset_v1_t;     /* 0.1 .. 0.3 */
+_Static_assert(sizeof(preset_v1_t) == 48, "old preset record is 48 B");
+typedef struct { uint32_t magic, seq, len, crc; } bank_hdr_t;
+
+static preset_t pr_user[PR_NU];
+_Static_assert(sizeof pr_user == ST_TAIL_N, "the user presets are the store record's tail (frodhes_store.h ST_TAIL_N)");
+
+/* factory presets (0.9.5): (param id, value) pairs over the defaults, 0xFF ends. Two groups per engine (the user): DRY,
+ * each instrument as the model plays it (F01..F04 the four Rhodes TYPEs, F13 VIBES, F15 MARIMBA: the compressor and a
+ * trace of room only), and FX (F05..F12 and F17..F19 Rhodes, F14 VIBES, F16 MARIMBA: the compressor, a reverb TYPE with its LOW CUT,
+ * echoes on the tempo). LEVEL: the Rhodes presets within 1 LU of F01 on the presets suite's chord
+ * (tools/hil_scan.py --host --only presets, plus each preset's critical bands); VIBES ~2.5 LU above, MARIMBA as the
+ * MANUAL says. F01 is the boot sound and the level reference. 0.9.10 (the headroom rule): every LEVEL +14 (+2.6 dB, the
+ * output limiter's ceiling -1.0 dBFS) where 4-note v127 chords with the pedal stay under -1.2 dBFS before the limiter
+ * with either velocity RESPONSE; the hot ones less or trimmed (F04 +3, F08 -8, F12 to 127, F13..F15 +5..+8, F16 -26),
+ * so hard playing never reaches the limiter (build/sonic/hr: a safety net for pile-ups only); F04 / F08 / F13 / F15 / F16 sit under their
+ * targets by it (MANUAL 'Factory presets'). F06 / F09 / F11 / F19 back to F01's level after the engine moved them (54 / 62 /
+ * 23 / 80). The starters U01..U09 to F01's level (+8..+14) where their hard chords stay under -1.2 dBFS: U02 -16 (it
+ * peaked at +0.6 dBFS before the limiter at -10; 6 more when TONE's level compensation was refitted on the clean
+ * engine, which gave its TONE 76 back 1.2 LU), U07 +5 only (MANUAL: both under F01).
+ * 2026-11-08 (the user: "the effects super loud", headphones clipping): 0.9.9's absolute output level again, every
+ * LEVEL here -19 (-3.6 dB: the +14 and the engine's +0.9 dB since 0.9.9; F01 within 0.5 dB of 0.9.9's on host) under
+ * the -2.7 dBFS ceiling (fx.c LIM_T 24000); the balance between the presets as 0.9.10 set it.
+ * 2026-11-08 (later): the effects no longer add peak (fx.c: the phaser's peak trim, the pan's sides capped at unity, the
+ * wah's make-up capped by the peaks, LP / HP RESO compensated, ANA's TIME over a silent line at once): the presets they
+ * made quieter back to 0.9.9's loudness, F05 +7, F09 +14, F10 +2, F11 +21, F18 +4, U04 +3, U05 +9, U07 +10 steps.
+ * 2026-11-09: PAN is 0.9.9's equal-power law again (no side cap): the PAN presets F05 -5, F18 -4, U07 -7 steps back
+ * to F01's level (hil_scan presets on the host: F05 +0.00, F18 +0.41, U07 -0.12 LU re F01).
+ * 2026-11-09: tools/quick.py's v127 chord and note against 0.9.9 (the compressor's hold 5.8 ms): F10 +5, F12 +9, F19 +8
+ * steps (F12 / F19 had lost 2-3 dB with the clean top); F16 stays ~3 / ~4.8 dB under 0.9.9 (0.9.9 reached it only
+ * through the limiter). Then F16 41 -> 25: no limiter on normal playing (the user's rule): at 41 its 4-note v127
+ * chords with the pedal reached the limiter in every take; 25 is the highest step whose worst take (Rhodes range and two
+ * octaves up, five start phases, FM-1 + HQ) peaks at most -3.2 dBFS (0.5 dB under LIM_T): ~6 / ~7.8 dB under 0.9.9.
+ * By the same rule F13 55 -> 45, F14 58 -> 48, F15 59 -> 41 (they reached the limiter in 10..18 of 20 takes).
+ * The compressor's hold 11.6 ms (fx.c CMP_HOLD 512): the v127 chords 0.2 dB lower; F02 +2, F03 +1, F05 +1, F06 +2 back
+ * with F01 (quick.py's v127 chord against 0.9.9: -1.1 .. -1.3, the compressor's held reduction, expected_changes 12).
+ *
+ * 2026-11-10, the proposed 19 (tools/f01_search.py final19, the user's pick of the recommended records): every
+ * Rhodes preset re-voiced by the host search (TONE, BARK, BELL, HAMMER, DECAY, the compressor, the reverb), each one
+ * level-matched to F01 by critical-band loudness (tools/cb_loud.py; F01 itself to 0.9.9's F01). New: F05 WARM 77,
+ * F06 PUNCH 77, F12 LUSH CHO, F19 WARM DRIVE; SUIT TREM moved F05 -> F08; dropped: DRIVEN 77, DYNO 80S, AUTO WAH,
+ * RADIO. The program numbers of the moved and new presets changed with it (MANUAL 'Factory presets').
+ * FINAL19 v2 (the stage-2 engine): each preset at 0.9.9's preset of the same name by critical-band loudness (within
+ * 1 dB) with the limiter idle (peaks under the -2.7 dBFS ceiling by 0.3 dB or more); where that margin could not
+ * hold at 0.9.9's loudness the LEVEL is cut to it (F04 BELL DYNO, F12 LUSH CHO, F13 VIBES, F14 VIBES ECHO, F15
+ * MARIMBA, F16 WOOD ECHO: 0.9.9 reached them through the limiter).
+ *
+ * The drive TYPEs (P_DRV_SW, drive.c: 1 FDRV, 2 KHLON, 3 TSH8, 4 OHCD, 5 BHLUE) chosen in four of them (SUIT TREM and
+ * TAPE ECHO keep FDRV, the default), each one's CPU predicted with its TYPE's own cost (tools/cpu_budget.py + drive.c's
+ * DRV_US, the blend included: <= 4200 us):
+ *   F09 70S PHASER  BHLUE   a light amp breakup under the phaser
+ *   F10 FUNK WAH    TSH8    the mid hump and tight lows into the wah
+ *   F11 RESO SWEEP  OHCD    more gain, open, for the resonance to ride on
+ *   F19 WARM DRIVE  KHLON   a transparent warm drive under the chorus and the tape echo */
+/* the compressor on every preset (0.9.5, the user: "always a bit of compression"): glue, not squash. Keys: THR -16 dB,
+ * 2:1, ATTACK 80 (5 ms: the hammer and the bark pass before it acts), RELEASE 72 (~230 ms); the mallets (VIBES,
+ * MARIMBA): 1.5:1, ATTACK 92 (9 ms), RELEASE 64. LOW CUT 70 (~150 Hz) / 80 (~200 Hz) keeps the bass out of the tails. */
+static const char *const PR_FNAME[PR_NF] = {
+    "STAGE 77", "SUITCASE", "EARLY FELT", "BELL DYNO", "WARM 77", "PUNCH 77", "BALLAD", "SUIT TREM", "70S PHASER",
+    "FUNK WAH", "RESO SWEEP", "LUSH CHO", "VIBES", "VIBES ECHO", "MARIMBA", "WOOD ECHO", "TAPE ECHO", "DREAM",
+    "WARM DRIVE"};   /* (the header shows 14 characters: names up to 10) */
+static const uint8_t PR_FDATA[] = {   /* the factory records, one after another: id / value pairs, 0xFF ends each */
+    /* F01 STAGE 77: the clean stage piano (the boot sound and the level reference): a bright TONE, the bell full, the
+     * bark lower, a trace of hall */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_RV_DEPTH, 18, P_RV_TYPE, 1, P_RV_LOCUT, 70, P_LEVEL, 57, P_TONE, 112, P_BARK, 48, P_BELL, 127, P_HAMMER, 64,
+    P_DECAY, 72, 0xFF,
+    /* F02 SUITCASE: the suitcase's cabinet, no vibrato: a gentle compressor (1.5:1), a bright TONE, the hammer soft, a
+     * trace of hall */
+    P_TYPE, 1, P_NOISE, 44, P_CMP_SW, 1, P_CMP_AMT, 36, P_CMP_RATIO, 0, P_CMP_ATK, 40, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_RV_DEPTH, 16, P_RV_TYPE, 1, P_RV_LOCUT, 70, P_LEVEL, 47, P_TONE, 112, P_BARK, 80, P_BELL, 96, P_HAMMER, 32,
+    P_DECAY, 72, 0xFF,
+    /* F03 EARLY FELT: the felt hammers, their soft onset, NOISE lower (soft playing), a brighter TONE, a gentle
+     * compressor, a trace of hall (0.9.13 SND3: LEVEL 46 -> 48, back to its level re F01 on FULL's new curve) */
+    P_TYPE, 2, P_NOISE, 36, P_CMP_SW, 1, P_CMP_AMT, 36, P_CMP_RATIO, 1, P_CMP_ATK, 40, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_RV_DEPTH, 18, P_RV_TYPE, 1, P_RV_LOCUT, 70, P_LEVEL, 48, P_TONE, 112, P_BARK, 80, P_BELL, 64, P_HAMMER, 64,
+    P_DECAY, 72, 0xFF,
+    /* F04 BELL DYNO: the bell voicing (its TYPE), the cards at the middle, a short plate */
+    P_TYPE, 3, P_NOISE, 44, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_RV_DEPTH, 16, P_RV_TYPE, 2, P_RV_LOCUT, 80, P_LEVEL, 52, P_TONE, 64, P_BARK, 64, P_BELL, 64, P_HAMMER, 64,
+    P_DECAY, 64, 0xFF,
+    /* F05 WARM 77: a warm 77: a gentle compressor, the TONE and the bark a little up, a little hall */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 36, P_CMP_RATIO, 1, P_CMP_ATK, 40, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_RV_DEPTH, 10, P_RV_TYPE, 1, P_RV_LOCUT, 70, P_LEVEL, 59, P_TONE, 80, P_BARK, 72, P_BELL, 64, P_HAMMER, 64,
+    P_DECAY, 72, P_RV_DECAY, 64, 0xFF,
+    /* F06 PUNCH 77: a punchy 77: the hammer full, the bark and the bell up, a bright TONE, a fast 1.5:1 compressor, a
+     * hall */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 36, P_CMP_RATIO, 0, P_CMP_ATK, 40, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_RV_DEPTH, 18, P_RV_TYPE, 1, P_RV_LOCUT, 70, P_LEVEL, 41, P_TONE, 96, P_BARK, 88, P_BELL, 96, P_HAMMER, 127,
+    P_DECAY, 72, P_RV_DECAY, 64, 0xFF,
+    /* F07 BALLAD: rounder (TONE and bell down), a slow chorus, a long plate behind a pre-delay, a soft quarter-note
+     * digital echo */
+    P_TYPE, 0, P_TONE, 56, P_BELL, 76, P_NOISE, 40, P_CMP_SW, 1, P_CMP_AMT, 36, P_CMP_RATIO, 2, P_CMP_ATK, 40,
+    P_CMP_REL, 72, P_CMP_GAIN, 8, P_CP_SW, 1, P_CP_DEPTH, 56, P_CP_SPEED, 40, P_DL_SW, 1, P_DL_DEPTH, 12,
+    P_DL_SYNC, 9, P_DL_FDBK, 30, P_DL_TONE, 50, P_RV_DEPTH, 48, P_RV_TYPE, 2, P_RV_DECAY, 84, P_RV_PREDLY, 40,
+    P_RV_LOCUT, 70, P_LEVEL, 59, P_BARK, 64, P_HAMMER, 64, P_DECAY, 64, 0xFF,
+    /* F08 SUIT TREM: the suitcase amp, its stereo PAN vibrato, a little warmth, a bright TONE, a 4:1 compressor, a
+     * vintage plate */
+    P_TYPE, 1, P_NOISE, 44, P_DRIVE, 20, P_TW_SW, 1, P_TW_MODE, 0, P_TW_DEPTH, 72, P_TW_RATE, 88, P_CMP_SW, 1,
+    P_CMP_AMT, 36, P_CMP_RATIO, 3, P_CMP_ATK, 100, P_CMP_REL, 72, P_CMP_GAIN, 8, P_RV_DEPTH, 24, P_RV_TYPE, 2,
+    P_RV_LOCUT, 70, P_LEVEL, 41, P_TONE, 112, P_BARK, 80, P_BELL, 64, P_HAMMER, 96, P_DECAY, 72, 0xFF,
+    /* F09 70S PHASER: a slow, deep phaser with feedback on a lightly driven, bright stage piano (the bark low), a dark
+     * analog echo, a plate */
+    P_TYPE, 0, P_NOISE, 48, P_DRIVE, 34, P_DRV_SW, 5, P_BARK, 48, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1,
+    P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8, P_PH_SW, 1, P_PH_DEPTH, 85, P_PH_SPEED, 30, P_PH_FDBK, 64,
+    P_DL_SW, 2, P_DL_DEPTH, 12, P_DL_SYNC, 9, P_DL_FDBK, 30, P_DL_TONE, 50, P_RV_DEPTH, 22, P_RV_TYPE, 2,
+    P_RV_LOCUT, 70, P_LEVEL, 75, P_TONE, 112, P_BELL, 96, P_HAMMER, 96, P_DECAY, 72, 0xFF,
+    /* F10 FUNK WAH: a compressor, drive, the touch wah (harder playing opens it), the bark up, a small dry room */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 56, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 26,
+    P_DRIVE, 44, P_DRV_SW, 3, P_TW_SW, 2, P_TW_DEPTH, 92, P_TW_RATE, 72, P_BARK, 84, P_RV_DEPTH, 14, P_RV_TYPE, 1,
+    P_RV_LOCUT, 80, P_LEVEL, 41, P_TONE, 64, P_BELL, 64, P_HAMMER, 64, P_DECAY, 64, 0xFF,
+    /* F11 RESO SWEEP: a driven tone into the resonant LP12, the LFO's triangle sweeping it over 2 bars, a quarter-note
+     * digital echo, a hall */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 3, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_DRIVE, 53, P_DRV_SW, 4, P_DRV_TONE, 60, P_FL_TYPE, 1, P_FL_FREQ, 76, P_FL_RESO, 88, P_FL_LFO, 64,
+    P_LFO_SHAPE, 1, P_LFO_SYNC, 13, P_DL_SW, 1, P_DL_DEPTH, 14, P_DL_SYNC, 9, P_DL_FDBK, 40, P_DL_TONE, 60,
+    P_RV_DEPTH, 22, P_RV_TYPE, 1, P_RV_LOCUT, 80, P_LEVEL, 52, P_TONE, 64, P_BARK, 64, P_BELL, 64, P_HAMMER, 64,
+    P_DECAY, 64, 0xFF,
+    /* F12 LUSH CHO: a lush chorus, a dotted-1/8 tape echo, a plate */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_RV_DEPTH, 20, P_RV_TYPE, 2, P_RV_LOCUT, 80, P_LEVEL, 55, P_CP_SW, 1, P_CP_DEPTH, 64, P_CP_SPEED, 44,
+    P_DL_SW, 3, P_DL_DEPTH, 16, P_DL_SYNC, 8, P_DL_FDBK, 40, P_DL_TONE, 58, P_TONE, 64, P_BARK, 64, P_BELL, 64,
+    P_HAMMER, 64, P_DECAY, 64, 0xFF,
+    /* F13 VIBES: (dry) the vibraphone as the model plays it, the motor at 2.6 Hz, the mallet compressor, a trace of hall
+     * */
+    P_TYPE, 4, P_TONE, 64, P_BARK, 52, P_BELL, 70, P_HAMMER, 64, P_DECAY, 64, P_RELEASE, 64, P_NOISE, 40,
+    P_MOT_ON, 1, P_MOT_DEPTH, 90, P_MOT_RATE, 66, P_MOT_SHAPE, 0, P_CMP_SW, 1, P_CMP_AMT, 46, P_CMP_RATIO, 0,
+    P_CMP_ATK, 92, P_CMP_REL, 64, P_CMP_GAIN, 6, P_RV_DEPTH, 20, P_RV_TYPE, 1, P_RV_PREDLY, 20, P_RV_LOCUT, 70,
+    P_LEVEL, 42, 0xFF,
+    /* F14 VIBES ECHO: the motor off, a cord mallet, a light slow chorus, a dotted-1/8 tape echo, a bright plate */
+    P_TYPE, 4, P_TONE, 64, P_BARK, 82, P_BELL, 64, P_HAMMER, 60, P_DECAY, 72, P_RELEASE, 54, P_NOISE, 36,
+    P_MOT_ON, 0, P_CMP_SW, 1, P_CMP_AMT, 46, P_CMP_RATIO, 0, P_CMP_ATK, 92, P_CMP_REL, 64, P_CMP_GAIN, 6, P_CP_SW, 1,
+    P_CP_DEPTH, 40, P_CP_SPEED, 40, P_DL_SW, 3, P_DL_DEPTH, 20, P_DL_SYNC, 8, P_DL_FDBK, 50, P_DL_TONE, 56,
+    P_RV_DEPTH, 34, P_RV_TYPE, 2, P_RV_DECAY, 70, P_RV_PREDLY, 16, P_RV_LOCUT, 80, P_LEVEL, 44, 0xFF,
+    /* F15 MARIMBA: (dry) the default mallet, tube and weight, MUTE 0, the mallet compressor, a trace of hall */
+    P_TYPE, 5, P_TONE, 64, P_BARK, 64, P_BELL, 64, P_HAMMER, 64, P_DECAY, 64, P_RELEASE, 0, P_NOISE, 40, P_CMP_SW, 1,
+    P_CMP_AMT, 46, P_CMP_RATIO, 0, P_CMP_ATK, 92, P_CMP_REL, 64, P_CMP_GAIN, 6, P_RV_DEPTH, 22, P_RV_TYPE, 1,
+    P_RV_PREDLY, 12, P_RV_LOCUT, 70, P_LEVEL, 39, 0xFF,
+    /* F16 WOOD ECHO: a hard yarn mallet, MUTE 0, a light chorus, a dotted-1/8 digital echo, a hall behind a pre-delay */
+    P_TYPE, 5, P_TONE, 60, P_BARK, 80, P_BELL, 64, P_HAMMER, 110, P_DECAY, 64, P_RELEASE, 0, P_NOISE, 40,
+    P_CMP_SW, 1, P_CMP_AMT, 46, P_CMP_RATIO, 0, P_CMP_ATK, 92, P_CMP_REL, 64, P_CMP_GAIN, 6, P_CP_SW, 1,
+    P_CP_DEPTH, 40, P_CP_SPEED, 44, P_DL_SW, 1, P_DL_DEPTH, 22, P_DL_SYNC, 8, P_DL_FDBK, 26, P_DL_TONE, 50,
+    P_RV_DEPTH, 38, P_RV_TYPE, 1, P_RV_DECAY, 64, P_RV_PREDLY, 24, P_RV_LOCUT, 80, P_LEVEL, 17, 0xFF,
+    /* F17 TAPE ECHO: a bright piano (the bark low) into the tape echo, dotted 1/8 on the tempo, a plate */
+    P_TYPE, 0, P_TONE, 112, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72,
+    P_CMP_GAIN, 8, P_DRIVE, 22, P_DL_SW, 3, P_DL_DEPTH, 29, P_DL_SYNC, 8, P_DL_FDBK, 72, P_DL_TONE, 62,
+    P_RV_DEPTH, 22, P_RV_TYPE, 2, P_RV_LOCUT, 80, P_LEVEL, 52, P_BARK, 48, P_BELL, 96, P_HAMMER, 96, P_DECAY, 64,
+    0xFF,
+    /* F18 DREAM: felt hammers, a slow stereo pan, chorus, a quarter-note analog echo, a long dark hall */
+    P_TYPE, 2, P_DECAY, 72, P_NOISE, 30, P_CMP_SW, 1, P_CMP_AMT, 36, P_CMP_RATIO, 0, P_CMP_ATK, 40, P_CMP_REL, 80,
+    P_CMP_GAIN, 8, P_TW_SW, 1, P_TW_MODE, 0, P_TW_DEPTH, 36, P_TW_RATE, 30, P_CP_SW, 1, P_CP_DEPTH, 60,
+    P_CP_SPEED, 30, P_DL_SW, 2, P_DL_DEPTH, 21, P_DL_SYNC, 9, P_DL_FDBK, 30, P_RV_DEPTH, 76, P_RV_TYPE, 1,
+    P_RV_DECAY, 104, P_RV_PREDLY, 60, P_RV_TONE, 56, P_RV_MOD, 84, P_RV_LOCUT, 80, P_LEVEL, 47, P_TONE, 112,
+    P_BARK, 80, P_BELL, 127, P_HAMMER, 96, 0xFF,
+    /* F19 WARM DRIVE: a warm drive (KHLON), chorus, a dotted-1/8 tape echo, a plate */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_RV_DEPTH, 16, P_RV_TYPE, 2, P_RV_LOCUT, 80, P_LEVEL, 64, P_DRIVE, 40, P_DRV_SW, 2, P_DRV_TONE, 70, P_CP_SW, 1,
+    P_CP_DEPTH, 50, P_CP_SPEED, 36, P_DL_SW, 3, P_DL_DEPTH, 12, P_DL_SYNC, 8, P_DL_FDBK, 30, P_DL_TONE, 56,
+    P_TONE, 64, P_BARK, 64, P_BELL, 64, P_HAMMER, 64, P_DECAY, 64, 0xFF,
+};
+/* factory record idx (< PR_NF): the records are stored back to back (0.9.6: no padding to 64 bytes, 423 B less) */
+FR_COLD static const uint8_t *pr_fdata(uint32_t idx)
+{
+    const uint8_t *d = PR_FDATA;
+    for (; idx; idx--) { while (*d != 0xFFu) d += 2; d++; }
+    return d;
+}
+
+/* the user bank's starters (0.9.5): a bank that was never saved (no header in either sector: a new FM-1, or one that
+ * never saved a preset) opens with these in U01..U09, in RAM only; the first save writes them with the bank. A bank
+ * already saved keeps exactly what it holds, and a damaged one stays empty. Rhodes effect sounds the factory bank does
+ * not have (U10..U12 held TAPE ECHO, DREAM and RADIO until 0.9.5's RC: then the factory F17..F19; 0.9.10 dropped RADIO, F19 is
+ * WARM DRIVE); LEVELs as
+ * the factory ones (within 1 LU of F01 on the presets suite's chord, tools/hil_scan.py --host --only presets), each
+ * one's CPU <= 4200 us (tests/py/test_presets_cpu.py). One string of (id, value) pairs, 0xFF after each starter. */
+#define PR_NS 9u
+_Static_assert(PR_NS <= PR_NU, "the starters fit the user bank");
+static const char *const PR_SNAME[PR_NS] = {
+    "DARK KEYS", "GLASS BELL", "FUNK COMP", "DREAM PAD", "LO-FI", "HARD TREM", "SLOW PAN", "REEDY", "VELVET"};
+static const uint8_t PR_SDATA[] = {
+    /* U01 DARK KEYS: a rounder tine, less bell, a softer hammer, a slow chorus, a dark analog echo, a long dark hall */
+    P_TYPE, 0, P_TONE, 50, P_BELL, 48, P_HAMMER, 50, P_DECAY, 76, P_NOISE, 40, P_CMP_SW, 1, P_CMP_AMT, 50,
+    P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8, P_CP_SW, 1, P_CP_DEPTH, 48, P_CP_SPEED, 36, P_DL_SW, 2,
+    P_DL_DEPTH, 10, P_DL_SYNC, 9, P_DL_FDBK, 30, P_DL_TONE, 40, P_RV_DEPTH, 46, P_RV_TYPE, 1, P_RV_DECAY, 84,
+    P_RV_PREDLY, 36, P_RV_TONE, 56, P_RV_LOCUT, 62, P_LEVEL, 43, 0xFF,
+    /* U02 GLASS BELL: the bell voicing nearer the pickup's axis with less bark (glass, not growl), chorus, a dotted-1/8
+     * echo, a bright plate */
+    P_TYPE, 3, P_TONE, 76, P_BELL, 80, P_HAMMER, 84, P_BARK, 56, P_NOISE, 40, P_CMP_SW, 1, P_CMP_AMT, 50,
+    P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8, P_CP_SW, 1, P_CP_DEPTH, 56, P_CP_SPEED, 50,
+    P_DL_SW, 1, P_DL_DEPTH, 17, P_DL_SYNC, 8, P_DL_FDBK, 24, P_DL_TONE, 80, P_RV_DEPTH, 32, P_RV_TYPE, 2,
+    P_RV_PREDLY, 20, P_RV_LOCUT, 80, P_LEVEL, 53, 0xFF,
+    /* U03 FUNK COMP: the bright, barky comping piano: a firm compressor for evenness, a touch of mid drive (TSH8), a
+     * small room */
+    P_TYPE, 0, P_TONE, 72, P_BARK, 88, P_HAMMER, 84, P_BELL, 72, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 50,
+    P_CMP_RATIO, 3, P_CMP_ATK, 30, P_CMP_REL, 50, P_CMP_GAIN, 18, P_DRV_SW, 3, P_DRIVE, 28, P_DRV_TONE, 70,
+    P_RV_DEPTH, 14, P_RV_TYPE, 1, P_RV_LOCUT, 80, P_LEVEL, 39, 0xFF,
+    /* U04 DREAM PAD: felt hammers, a long decay, a slow pan at 0.9 Hz, chorus, a dotted-1/4 tape echo, the INFINITE
+     * reverb's long bloom (DECAY 40: a long tail that still dies, so a save never waits) */
+    P_TYPE, 2, P_DECAY, 100, P_RELEASE, 92, P_TONE, 52, P_BELL, 44, P_HAMMER, 44, P_NOISE, 30, P_CMP_SW, 1,
+    P_CMP_AMT, 46, P_CMP_RATIO, 1, P_CMP_ATK, 90, P_CMP_REL, 80, P_CMP_GAIN, 8, P_TW_SW, 1, P_TW_MODE, 0,
+    P_TW_DEPTH, 30, P_TW_RATE, 24, P_CP_SW, 1, P_CP_DEPTH, 56, P_CP_SPEED, 26, P_DL_SW, 3, P_DL_DEPTH, 24,
+    P_DL_SYNC, 10, P_DL_FDBK, 70, P_DL_TONE, 46, P_RV_DEPTH, 70, P_RV_TYPE, 3, P_RV_DECAY, 40, P_RV_PREDLY, 60,
+    P_RV_TONE, 50, P_RV_LOCUT, 80, P_LEVEL, 48, 0xFF,
+    /* U05 LO-FI: worn tape, a small amp: a mellow MOSFET drive (OHCD), a closed low-pass, a dark analog slap, a little
+     * AM wobble at 1.7 Hz */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_DRV_SW, 4, P_DRIVE, 46, P_DRV_TONE, 40, P_FL_TYPE, 1, P_FL_FREQ, 72, P_FL_RESO, 24, P_DL_SW, 2, P_DL_DEPTH, 16,
+    P_DL_SYNC, 3, P_DL_FDBK, 9, P_DL_TONE, 36, P_TW_SW, 1, P_TW_MODE, 1, P_TW_DEPTH, 36, P_TW_RATE, 44,
+    P_RV_DEPTH, 18, P_RV_TYPE, 1, P_RV_TONE, 44, P_RV_LOCUT, 80, P_LEVEL, 52, 0xFF,
+    /* U06 HARD TREM: the amp tremolo, a near-square chop at 6 Hz over a soft two-stage breakup (BHLUE), a plate */
+    P_TYPE, 0, P_NOISE, 48, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_DRV_SW, 5, P_DRIVE, 30, P_TW_SW, 1, P_TW_MODE, 1, P_TW_DEPTH, 100, P_TW_RATE, 100, P_TW_SHAPE, 56, P_BARK, 72,
+    P_RV_DEPTH, 20, P_RV_TYPE, 2, P_RV_LOCUT, 70, P_LEVEL, 48, 0xFF,
+    /* U07 SLOW PAN: the suitcase, a wide stereo pan at 2.1 Hz with a whisper of chorus, a soft analog echo, a hall */
+    P_TYPE, 1, P_NOISE, 44, P_CMP_SW, 1, P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8,
+    P_TW_SW, 1, P_TW_MODE, 0, P_TW_DEPTH, 96, P_TW_RATE, 58, P_CP_SW, 1, P_CP_DEPTH, 30, P_CP_SPEED, 30, P_DL_SW, 2,
+    P_DL_DEPTH, 10, P_DL_SYNC, 9, P_DL_FDBK, 26, P_DL_TONE, 54, P_RV_DEPTH, 30, P_RV_TYPE, 1, P_RV_PREDLY, 24,
+    P_RV_LOCUT, 70, P_LEVEL, 48, 0xFF,
+    /* U08 REEDY: a reedy electric piano: the tine near the pickup's axis (a strong second harmonic), a hard hammer, a
+     * short decay, a mid drive (TSH8), an AM tremolo at 3.9 Hz, a tape slap, a short plate */
+    P_TYPE, 0, P_TONE, 94, P_BARK, 72, P_BELL, 40, P_HAMMER, 100, P_DECAY, 40, P_RELEASE, 44, P_NOISE, 36, P_CMP_SW, 1,
+    P_CMP_AMT, 50, P_CMP_RATIO, 1, P_CMP_ATK, 80, P_CMP_REL, 72, P_CMP_GAIN, 8, P_DRV_SW, 3, P_DRIVE, 26,
+    P_DRV_TONE, 66, P_TW_SW, 1, P_TW_MODE, 1, P_TW_DEPTH, 64, P_TW_RATE, 82, P_DL_SW, 3, P_DL_DEPTH, 10, P_DL_SYNC, 6,
+    P_DL_FDBK, 20, P_DL_TONE, 56, P_RV_DEPTH, 16, P_RV_TYPE, 2, P_RV_LOCUT, 80, P_LEVEL, 50, 0xFF,
+    /* U09 VELVET: the softest piano, early felt hammers, the dampers softly audible, a mid hall */
+    P_TYPE, 2, P_TONE, 46, P_BARK, 44, P_BELL, 36, P_HAMMER, 40, P_DECAY, 72, P_NOISE, 40, P_CMP_SW, 1, P_CMP_AMT, 46,
+    P_CMP_RATIO, 1, P_CMP_ATK, 90, P_CMP_REL, 72, P_CMP_GAIN, 8, P_RV_DEPTH, 40, P_RV_TYPE, 1, P_RV_DECAY, 76,
+    P_RV_PREDLY, 30, P_RV_LOCUT, 62, P_LEVEL, 38, 0xFF,
+};
+
+FR_COLD static void presets_starters(void)                  /* an empty bank: U01..U09 the starters (RAM; saved with the bank) */
+{
+    const uint8_t *d = PR_SDATA;
+    uint32_t i, j;
+    for (i = 0; i < PR_NS; i++) {
+        preset_t *u = &pr_user[i];
+        const char *nm = PR_SNAME[i];
+        u->ver = 3; u->np = P_COUNT; u->used = 1; u->rsv = 0;
+        for (j = 0; j < sizeof u->name; j++) u->name[j] = *nm ? *nm++ : ' ';
+        for (j = 0; j < P_SLOTS; j++) u->p[j] = j < P_COUNT ? PARAMS[j].def : 0;
+        for (; *d != 0xFF; d += 2) u->p[d[0]] = d[1];
+        d++;
+    }
+}
+
+/* ---- bank storage (host: two RAM sectors) */
+#ifdef DINGHY_HOST
+FR_COLD static uint32_t crc32(const uint8_t *p, uint32_t n)
+{
+    uint32_t c = 0xFFFFFFFFu, k;
+    while (n--) { c ^= *p++; for (k = 0; k < 8u; k++) c = c & 1u ? (c >> 1) ^ 0xEDB88320u : c >> 1; }
+    return ~c;
+}
+FR_COLD static int bank_read(uint32_t at, void *p, uint32_t n) { return st_read(at, p, n); }   /* (tests/host.c's flash) */
+static uint8_t bank_buf[sizeof(bank_hdr_t) + sizeof pr_user];
+#else
+FR_COLD static int bank_read(uint32_t at, void *p, uint32_t n) { return flash_ok ? st_read(at, p, n) : -1; }
+#define bank_buf st_rec                         /* (the migration's: the store's record buffer, free until its save) */
+_Static_assert(sizeof st_rec >= sizeof(bank_hdr_t) + sizeof pr_user, "the old bank fits the record buffer");
+#endif
+
+_Static_assert(sizeof(bank_hdr_t) + sizeof pr_user <= 4096u, "a bank copy is one 4 KiB sector");
+FR_COLD static int bank_valid(uint32_t at, bank_hdr_t *h)          /* the records: v3 (96 B), 0.4 (64 B) or 0.1 .. 0.3 (48 B) */
+{
+    if (bank_read(at, h, sizeof *h) || h->magic != PR_MAGIC) return 0;
+    if (h->len != sizeof pr_user && h->len != PR_NU * sizeof(preset_v2_t) && h->len != PR_NU * sizeof(preset_v1_t)) return 0;
+    if (bank_read(at, bank_buf, sizeof(bank_hdr_t) + h->len)) return 0;
+    return crc32(bank_buf + sizeof(bank_hdr_t), h->len) == h->crc;
+}
+
+static void presets_load_bank_in(void);
+FR_COLD static void presets_load_bank(void)
+{
+    presets_load_bank_in();
+    if (set_pr_from_rc) {                            /* the settings named U10..U12 of 16 factory presets (params.c's
+                                                      * conversion) and that slot is empty now: it was the starter that
+                                                      * became F17..F19 (TAPE ECHO, DREAM, RADIO; F19 is WARM
+                                                      * DRIVE since 0.9.10) */
+        uint32_t k = set.preset - PR_NF;
+        if (set.preset >= PR_NF + 9u && set.preset < PR_NF + 12u && !pr_user[k].used) set.preset = (uint8_t)(16u + k - 9u);
+        k = set.undo_preset - 1u - PR_NF;
+        if (set.undo_preset >= PR_NF + 10u && set.undo_preset < PR_NF + 13u && !pr_user[k].used)
+            set.undo_preset = (uint8_t)(17u + k - 9u);
+        set_pr_from_rc = 0;
+    }
+}
+static uint8_t pr_old;                          /* the migration found a bank before 0.9.6's (frodhes.c) */
+FR_COLD static uint32_t pr_old_id(void)                 /* the bank before 0.9.6, the copy the load takes: its id (0: none) */
+{
+    bank_hdr_t ha, hb;
+    int va = bank_valid(PR_BANK_A, &ha), vb = bank_valid(PR_BANK_B, &hb);
+    if (!va && !vb) return 0;
+    if (!va || (vb && (int32_t)(ha.seq - hb.seq) <= 0)) ha = hb;
+    return st_id(ha.crc ^ ha.len, ha.seq);
+}
+FR_COLD static void presets_load_bank_in(void)
+{
+    bank_hdr_t ha, hb;
+    int va, vb;
+    uint32_t i;
+    if (st_new && !(st_mig & 2u)) return;                 /* (the record's: settings_load) */
+    for (i = 0; i < PR_NU; i++) pr_user[i].used = 0;
+    if (!st_old_ok) { presets_starters(); return; }     /* (SMK: the stock's data there, not ours) */
+    va = bank_valid(PR_BANK_A, &ha); vb = bank_valid(PR_BANK_B, &hb);
+    if (!va && !vb) {                                     /* never saved (no header in either sector): the starters;
+                                                           * a damaged bank stays empty (its presets are lost, not
+                                                           * replaced) */
+        if (bank_read(PR_BANK_A, &ha, sizeof ha) || ha.magic != PR_MAGIC)
+            if (bank_read(PR_BANK_B, &hb, sizeof hb) || hb.magic != PR_MAGIC) presets_starters();
+        return;
+    }
+    pr_old = 1;
+    {
+        uint32_t at = va && (!vb || (int32_t)(ha.seq - hb.seq) > 0) ? PR_BANK_A : PR_BANK_B;
+        bank_hdr_t h;
+        if (!bank_valid(at, &h)) return;                      /* (re-reads it into bank_buf) */
+        if (h.len == sizeof pr_user) memcpy(pr_user, bank_buf + sizeof(bank_hdr_t), sizeof pr_user);
+        else {                                                /* an older bank: v3 records, the new ids at their
+                                                               * defaults (it is written as v3 at the next save) */
+            const uint8_t *b = bank_buf + sizeof(bank_hdr_t);
+            uint32_t rl = h.len / PR_NU, nold = rl == sizeof(preset_v1_t) ? 32u : 48u;
+            for (i = 0; i < PR_NU; i++) {
+                const preset_v2_t *o = (const preset_v2_t *)(b + i * rl);   /* v1 has the same head, p[32] */
+                preset_t *u = &pr_user[i];
+                uint32_t j;
+                u->ver = 3; u->used = o->used; u->rsv = 0;
+                memcpy(u->name, o->name, sizeof u->name);
+                for (j = 0; j < P_SLOTS; j++) u->p[j] = j < nold && j < o->np ? o->p[j] : j < P_COUNT ? PARAMS[j].def : 0;
+                if (nold == 32u) params_split_phaser(u->p, P_SLOTS);
+                params_v3_convert(u->p);
+                u->np = P_COUNT;
+            }
+        }
+    }
+}
+
+static settings_t set_saved;                     /* (frodhes.c: the settings last written) */
+FR_COLD static int presets_save_bank(void)                 /* main loop, only when quiet (the erase stalls the audio): the
+                                                    * record with the settings last written, then read back */
+{
+    int rc;
+#ifdef DINGHY_HOST
+    printf("%6u ms  preset bank saved\n", fm1_ms);   /* (tests: when it saves) */
+#endif
+    rc = settings_save(&set_saved, sizeof set_saved);
+    return rc ? rc : settings_check();
+}
+
+/* ---- loading, browsing, saving */
+static uint8_t pr_cand = 255, pr_save_mode, pr_save_slot, pr_save_pending;
+static uint32_t pr_cand_t;
+
+FR_COLD static void preset_name(uint32_t idx, char *s)          /* "F03 SUITCASE" / "U05 ST77 TRM" */
+{
+    uint32_t i = 0, n = idx < PR_NF ? idx + 1u : idx - PR_NF + 1u;
+    const char *nm = idx < PR_NF ? PR_FNAME[idx] : pr_user[idx - PR_NF].used ? pr_user[idx - PR_NF].name : "----";
+    s[i++] = idx < PR_NF ? 'F' : 'U';
+    s[i++] = (char)('0' + n / 10u); s[i++] = (char)('0' + n % 10u); s[i++] = ' ';
+    while (*nm && i < 16u) s[i++] = *nm++;
+    while (i > 4u && s[i - 1u] == ' ') i--;
+    s[i] = 0;
+}
+
+FR_COLD static uint32_t preset_of_pc(uint32_t pc)              /* a MIDI program change: 0..15 F01..F16, 16..31 U01..U16 (the
+                                                        * map before 0.9.5, kept), 32.. F17..; else 255 (none) */
+{
+    return pc < 16u ? pc : pc < 32u ? PR_NF + pc - 16u : pc < 16u + PR_NF ? pc - 16u : 255u;
+}
+
+FR_COLD static int preset_values(uint32_t idx, uint8_t *p)      /* the parameters preset idx sets; -1: no preset there */
+{
+    uint32_t i;                                         /* ids from P_SLOTS on are not in presets yet: defaults */
+    if (idx >= PR_NF + PR_NU) return -1;
+    if (idx >= PR_NF && !pr_user[idx - PR_NF].used) return -1;
+    for (i = 0; i < P_COUNT; i++) p[i] = PARAMS[i].def;
+    if (idx < PR_NF) {
+        const uint8_t *d = pr_fdata(idx);
+        for (i = 0; d[i] != 0xFF; i += 2u) p[d[i]] = d[i + 1u];
+    } else {
+        const preset_t *u = &pr_user[idx - PR_NF];
+        for (i = 0; i < P_SLOTS && i < P_COUNT && i < u->np; i++) p[i] = u->p[i] <= PARAMS[i].hi ? u->p[i] : PARAMS[i].def;
+    }
+    return 0;
+}
+
+/* the boot (frodhes.c app_main): the preset the record names, played as it is stored, without an undo step (the
+ * record's undo copy stays); 0 = done, -1 = it is not there (the record's sound plays: snd_base, params.c) */
+FR_COLD static int preset_boot(void)
+{
+    uint8_t p[P_COUNT];
+    uint32_t i;
+    if (preset_values(set.preset, p)) return -1;
+    for (i = 0; i < P_COUNT; i++) param_set(i, p[i]);
+    rev_relatch();                                      /* (a sound's own PLATE AUTO size, as before) */
+    tempo_sync_publish();
+    return 0;
+}
+
+FR_COLD static void preset_load(uint32_t idx)
+{
+    uint8_t p[P_COUNT];
+    uint32_t i;
+    if (preset_values(idx, p)) return;
+    for (i = 0; i < P_COUNT; i++) UV(i) = PV(i);
+    set.undo_valid = 1;
+    set.undo_preset = (uint8_t)(set.preset < PR_NF + PR_NU ? set.preset + 1u : 0u);   /* what the undo copy was */
+    fx_hold = 1;                                        /* (the effects' values: over the next blocks, fx_set) */
+    for (i = 0; i < P_COUNT; i++) param_set(i, p[i]);
+    fx_hold = 0;
+    fx_ps = 1; fx_pb = blk_n;                           /* (from the first step again: one under way keeps its
+                                                         * values, newer ones over them, until its step comes) */
+    rev_relatch();                                      /* (a sound's own PLATE AUTO size, as before) */
+    set.preset = (uint8_t)idx;
+    snd_base_take();                                    /* the sound a power cycle comes back to (params.c) */
+    tempo_sync_publish();
+    set_dirty = 1; set_t_change = fm1_ms;
+#if defined(C1PF_ON)
+    c1_pf_pc = 1;                                       /* (C1_PROF: the snapshot counts the blocks from here) */
+#endif
+    ui_draw_page_change();
+    {
+        char s[20];
+        preset_name(idx, s);
+        ui_say(s);
+    }
+}
+
+/* main loop, between blocks: a Program Change's kept effect values, one step a block (fx.c fx_set) */
+static void fx_pend_poll(void)
+{
+    uint32_t b = blk_n;
+    if (!fx_ps || b == fx_pb) return;
+    fx_pb = b;
+    fx_pend_apply(fx_ps - 1u);
+    fx_ps = fx_ps < FX_PEND_N ? (uint8_t)(fx_ps + 1u) : 0u;
+}
+
+static void fx_pend_flush(void)                 /* all of them now (the boot's load: no audio yet) */
+{
+    uint32_t k;
+    for (k = 0; k < FX_PEND_N; k++) fx_pend_apply(k);
+    fx_ps = 0;
+}
+
+FR_COLD static void preset_undo(void)
+{
+    uint8_t t[P_COUNT];
+    uint32_t i;
+    if (!set.undo_valid) return;
+    for (i = 0; i < P_COUNT; i++) t[i] = PV(i);
+    for (i = 0; i < P_COUNT; i++) param_set(i, UV(i));
+    rev_relatch();                                      /* (a sound's own PLATE AUTO size, as before) */
+    for (i = 0; i < P_COUNT; i++) UV(i) = t[i];
+    if (set.undo_preset) {                              /* the header names the sound that plays (0.9.3: it kept
+                                                         * the loaded preset's name over the sound before it) */
+        uint8_t was = set.preset;
+        set.preset = (uint8_t)(set.undo_preset - 1u);
+        set.undo_preset = (uint8_t)(was < PR_NF + PR_NU ? was + 1u : 0u);
+    }
+    snd_base_take();                                    /* (an undo picks the sound and the preset it names) */
+    set_dirty = 1; set_t_change = fm1_ms;
+    tempo_sync_publish();
+    ui_draw_page_change();
+    ui_say("UNDO");
+}
+
+FR_COLD static void preset_autoname(char *n)                     /* TYPE + the effects on: "ST77 TRM PHA DD" */
+{
+    const char *parts[5];
+    uint32_t i = 0, k, np = 0;
+    parts[np++] = N_TYPE[PV(P_TYPE)];
+    if (PV(P_MOT_ON) && TYPE_HAS_MOTOR(PV(P_TYPE))) parts[np++] = "MOT";   /* the motor (records v3; VIBES only) */
+    if (PV(P_TW_SW) && np < 3u) parts[np++] = N_TW[PV(P_TW_SW)];
+    if (PV(P_CP_SW)) parts[np++] = "CHO";
+    if (PV(P_PH_SW) && np < 4u) parts[np++] = "PHA";
+    if (PV(P_DL_SW) && np < 5u) parts[np++] = PV(P_DL_SW) == 1 ? "DD" : PV(P_DL_SW) == 3 ? "TD" : "AD";
+    for (k = 0; k < np; k++) {
+        const char *p = parts[k];
+        if (k && i < 12u) n[i++] = ' ';
+        while (*p && i < 12u) n[i++] = *p++;
+    }
+    while (i < 12u) n[i++] = ' ';
+}
+
+FR_COLD static void presets_poll(int32_t d_presets, int32_t d_k1, uint32_t b, uint32_t rel)
+{
+    static uint32_t save_t;
+    char s[20];
+    uint32_t i;
+    if (b >> BTN_SAVE & 1u) save_t = fm1_ms;
+    if (!pr_save_mode && fm1_in.buttons >> BTN_SAVE & 1u && save_t && fm1_ms - save_t >= 700u) {
+        save_t = 0; preset_undo(); return;
+    }
+    if (rel >> BTN_SAVE & 1u && save_t) {               /* a tap: open the save mode, or (in it) save */
+        save_t = 0;
+        if (!pr_save_mode) {
+            pr_save_mode = 1;
+            pr_save_slot = set.preset >= PR_NF && set.preset < PR_NF + PR_NU ? (uint8_t)(set.preset - PR_NF) : 0;
+            return;
+        }
+        {
+            preset_t *u = &pr_user[pr_save_slot];
+            u->ver = 3; u->np = P_COUNT; u->used = 1; u->rsv = 0;
+            preset_autoname(u->name);
+            for (i = 0; i < P_SLOTS; i++) u->p[i] = i < P_COUNT ? PV(i) : 0;
+            set.preset = (uint8_t)(PR_NF + pr_save_slot);
+            snd_base_take();
+            set_dirty = 1; set_t_change = fm1_ms;
+            pr_save_mode = 0;
+            pr_save_pending = 1;
+            ui_mark(E_HEADER);
+            ui_say("SAVING...");
+        }
+        return;
+    }
+    if (pr_save_mode) {
+        int32_t d = d_presets + d_k1;
+        if (d) {
+            int32_t v = pr_save_slot + (d > 0 ? 1 : -1);
+            pr_save_slot = (uint8_t)(v < 0 ? 0 : v > (int32_t)PR_NU - 1 ? PR_NU - 1u : (uint32_t)v);
+        }
+        if ((b >> BTN_HOME | b >> BTN_OCT_DOWN) & 1u) { pr_save_mode = 0; ui_say("NOT SAVED"); }
+        return;
+    }
+    if (d_presets) {
+        int32_t v0 = pr_cand == 255 ? (set.preset < PR_NF + PR_NU ? set.preset : 0) : pr_cand, v = v0 + (d_presets > 0 ? 1 : -1);
+        while (v >= (int32_t)PR_NF && v < (int32_t)(PR_NF + PR_NU) && !pr_user[v - PR_NF].used) v += d_presets > 0 ? 1 : -1;
+        if (v < 0) v = 0;
+        if (v >= (int32_t)(PR_NF + PR_NU)) v = v0;          /* past the last saved preset: stay (it went back to the last factory one) */
+        pr_cand = (uint8_t)v; pr_cand_t = fm1_ms;
+        preset_name((uint32_t)v, s);
+        ui_say(s);
+    }
+    if (pr_cand != 255 && fm1_ms - pr_cand_t >= 400u) { preset_load(pr_cand); pr_cand = 255; }
+}
+
+static uint32_t pr_wait_t;
+FR_COLD static void presets_save_poll(void)
+{
+    /* a save waits for silence (the flash rule); INFINITE's held tail (SUSTAIN, FREEZE) never falls silent: the footer says so every
+     * MSG_MS until the freeze is left (INFINITE's SUSTAIN or FREEZE: DECAY under 120, another TYPE, OFF) and the tail
+     * ends; then it saves */
+    if (pr_save_pending && rev_frozen() && fm1_ms - pr_wait_t >= MSG_MS) {
+        pr_wait_t = fm1_ms;
+        ui_say(rev_frozen() == 2 ? "SAVE WAITS: FREEZE ON" : "SAVE WAITS: SUSTAIN ON");
+    }
+    if (pr_save_pending && eng_idle() && fx_quiet()) {
+        pr_save_pending = 0;
+        ui_say(presets_save_bank() ? "SAVE FAILED" : "SAVED");
+    }
+}

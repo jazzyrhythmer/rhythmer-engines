@@ -1,0 +1,124 @@
+# SPDX-License-Identifier: GPL-3.0-only
+"""tools/changes.py: the release-note fragments in docs/changes/ (one per change, so two PRs never edit the same
+notes file) are well formed, and tools/release.py assembles them in a stable order."""
+import os
+import sys
+
+import pytest
+
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import changes as ch  # noqa: E402
+
+
+def test_repo_fragments_are_well_formed():
+    frags = ch.load()                                   # raises with every problem
+    ch.tagline()                                        # the notes' head line comes from the manual
+    notes = ch.assemble("9.9.9", frags) if frags else ""
+    summ = [secs["Summary"] for _, secs in frags if "Summary" in secs]
+    assert not frags or notes.startswith(f"**Frodhes 9.9.9** {summ[0]}\n\n" if summ else
+                                         "**Frodhes 9.9.9**: a physically modelled ")
+
+
+def test_parse():
+    secs = ch.parse("<!-- topic: x -->\n## New\n- a\n  more of a\n  - a sub-item\n\n- b\n## Tools\n- t\n")
+    assert secs == {"New": "- a\n  more of a\n  - a sub-item\n\n- b", "Tools": "- t"}
+    assert ch.parse("## Summary\n\nadds a thing\nand **another**.\n\n## New\n- a\n") == {
+        "Summary": "adds a thing and **another**.", "New": "- a"}
+    for text, msg in (("## New\n- a\n## New\n- b\n", "a second time"),
+                      ("## Fixed\n- a\n## New\n- b\n", "after '## Fixed'"),
+                      ("## Fixes\n- a\n", "heading '## Fixes'"),
+                      ("### New\n- a\n", "heading '### New'"),
+                      ("Intro.\n## New\n- a\n", "text before the first section"),
+                      ("## New\nplain text\n", "not a list line"),
+                      ("## New\n\n## Tools\n- t\n", "'## New' is empty"),
+                      ("> **DRAFT** x\n## New\n- a\n", "a DRAFT line"),
+                      ("", "no section"),
+                      ("## New\n- a\n## Summary\nadds x\n", "after '## New'"),
+                      ("## Summary\n- adds x\n", "one plain paragraph, not a list"),
+                      ("## Summary\nadds x\n\nand y\n", "no blank line"),
+                      ("## Summary\nFrodhes adds x\n", "begin with the verb")):
+        with pytest.raises(ch.Bad, match=msg):
+            ch.parse(text)
+
+
+def write(tmp_path, files):
+    d = tmp_path / "docs" / "changes"
+    d.mkdir(parents=True, exist_ok=True)
+    (tmp_path / "docs" / "MANUAL.md").write_text("**A physically modelled thing for the M-VAVE FM-1.** More.\n")
+    for k, v in files.items():
+        (d / k).write_text(v)
+    return str(tmp_path)
+
+
+def test_load_and_assemble_in_file_name_order(tmp_path):
+    r = write(tmp_path, {"zeta.md": "## New\n- Z new\n## Fixed\n- Z fix\n", "alpha.md": "## Fixed\n- A fix\n",
+                         "m-1.md": "## Changes\n- M change\n"})
+    frags = ch.load(r)
+    assert [f for f, _ in frags] == ["alpha.md", "m-1.md", "zeta.md"]
+    n = ch.assemble("1.2.3", frags, r)
+    assert n.startswith("**Frodhes 1.2.3**: a physically modelled thing for the M-VAVE FM-1. Every note")
+    assert "`frodhes.fwsc` below (the same file as `frodhes-1.2.3.fwsc`" in n and ch.DOWNLOAD in n
+    # the install: three routes, FM-1 (browser or terminal, then the rescue), the Move, the SMK-37 files
+    inst = n[n.index("### Install"):n.index("### New in")]
+    i = [inst.index(s) for s in ("**FM-1**", f"{ch.PAGES_URL}#install", "python3 tools/fm1_install.py frodhes.fwsc",
+                                 "**OCT−**", "**Move**", "Schwung Manager", "From GitHub URL**, `leonardoMirabal/frodhes`",
+                                 "`frodhes-module.tar.gz`", "**From Tarball**", "**SMK-37 Pro, SMK-37 Elite, MKE-P37**",
+                                 "`frodhes-smk37-pro.fwsc`")]
+    assert i == sorted(i)
+    nm = ch.assemble("1.2.3", frags, r, move=False)                      # no Move package: no Move route
+    assert "**Move**" not in nm and "frodhes-module.tar.gz" not in nm and "**SMK-37 Pro" in nm
+    order = [n.index(s) for s in ("### Install", "### New in 1.2.3\n- Z new", "### Changes\n- M change",
+                                  "### Fixed\n- A fix\n- Z fix", "Full manual:")]
+    assert order == sorted(order) and "### Tools" not in n and "### Tested" not in n
+    assert ch.assemble("1.2.3", ch.load(r), r) == n                      # stable
+    nc = ch.assemble("1.2.3", frags, r, c1=True, plugin=True)           # the two-core image and the plugin's routes
+    assert "**FM-1, two cores**" not in n and "frodhes-plugin-windows.zip" not in n
+    assert nc.index("**FM-1**") < nc.index("`frodhes-c1.fwsc`") < nc.index("frodhes-plugin-macos.pkg") < nc.index("**Move**")
+    assert "PLUGIN.md#packages" in nc
+    (tmp_path / "docs" / "MANUAL.md").write_text("**A physically modelled thing for the M-VAVE FM-1 and the Ableton Move.** More.\n")
+    assert ch.assemble("1.2.3", ch.load(r), r).startswith(
+        "**Frodhes 1.2.3**: a physically modelled thing for the M-VAVE FM-1 and the Ableton Move. Every note")   # two devices
+
+
+def test_summary_line(tmp_path):
+    r = write(tmp_path, {"00-summary.md": "## Summary\nadds a thing\n  and more.\n", "a.md": "## New\n- A new\n"})
+    n = ch.assemble("1.2.3", ch.load(r), r)
+    assert n.startswith("**Frodhes 1.2.3** adds a thing and more.\n\n**Download:**")
+    assert "Every note is computed" not in n and "### Summary" not in n and "### New in 1.2.3\n- A new" in n
+    (tmp_path / "docs" / "changes" / "b.md").write_text("## Summary\nadds two\n")
+    with pytest.raises(ch.Bad, match="'## Summary' in 2 fragments"):
+        ch.load(r)
+    r = write(tmp_path / "v", {"00-summary.md": "## Summary\nadds the 1.2.3 thing\n"})
+    with pytest.raises(ch.Bad, match="names 1.2.3"):
+        ch.assemble("1.2.3", ch.load(r), r)
+
+
+def test_refusals(tmp_path):
+    with pytest.raises(ch.Bad, match="no release-note fragments"):
+        ch.assemble("1.2.3", ch.load(write(tmp_path, {})), str(tmp_path))
+    r = write(tmp_path, {"Bad_Name.md": "## New\n- x\n", "ok.md": "## New\n- x\n", "two.md": "## Nope\n- x\n"})
+    with pytest.raises(ch.Bad) as e:
+        ch.load(r)
+    assert "Bad_Name.md: file name" in str(e.value) and "two.md:1: heading" in str(e.value)
+    r = write(tmp_path / "b", {"x.md": "## New\n- The 1.2.3 thing\n- settings saved by 1.2.2 load\n"})
+    with pytest.raises(ch.Bad, match="names 1.2.3, the coming release"):
+        ch.assemble("1.2.3", ch.load(r), r)
+    assert "settings saved by 1.2.2 load" in ch.assemble("1.2.4", ch.load(r), r)      # history is fine
+    r = write(tmp_path / "c", {"x.md": "## New\n- see 1.2.30 and 11.2.3\n"})
+    assert "1.2.30" in ch.assemble("1.2.3", ch.load(r), r)              # another version, not the coming one
+
+
+def test_notes_publish_no_internal_detail():
+    # the notes are for players: paths, file names, hashes, constants, test machinery and private research never pass
+    bad = {"## Changes\n- the limiter's threshold, LIM_T 24000\n": "a code constant",
+           "## Tools\n- `tools/release_diff.py` moved\n": "a source / test path",
+           "## Changes\n- fixed in 42846aed\n": "a commit hash",
+           "## Changes\n- Gate M references renewed\n": "test machinery",
+           "## Changes\n- closer to the study\n": "private research",
+           "## Tested\n- make test\n": "## Tested"}
+    for text, what in bad.items():
+        hits = ch.internal([("x.md", ch.parse(text, "x.md"))])
+        assert hits and what in hits[0], (text, hits)
+    ok = "## Changes\n- **A cleaner upper register**: above C5 the tone stays clear ([MPC.md](https://x/docs/MPC.md)).\n"
+    assert ch.internal([("x.md", ch.parse(ok, "x.md"))]) == []

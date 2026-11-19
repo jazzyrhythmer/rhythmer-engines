@@ -1,0 +1,143 @@
+[
+  {
+    "engine": "drumx",
+    "repo": "https://github.com/juanjiant-bit/JIANT",
+    "commit": "b2c7f365dd8b8d14047d0dbe9b4edd82cc5f09ae"
+  },
+  {
+    "engine": "cs1",
+    "repo": "https://github.com/twochannels/CS-1.git",
+    "commit": "5dce8fadd3aa86cf47a3290289ee1c10b7c102e4"
+  },
+  {
+    "engine": "elixir",
+    "repo": "https://github.com/dmajka/elixir.git",
+    "commit": "aadf74dbc972f2e2c896eaf7353d957c3fe8c1b4"
+  },
+  {
+    "engine": "fm106",
+    "repo": "https://github.com/PatttF/fm-106.git",
+    "commit": "b795c3d9431c4cd552d5951f70b549eeff5c288d"
+  },
+  {
+    "engine": "fmini",
+    "repo": "https://github.com/ruppert/fmini-1.git",
+    "commit": "02f5c53b09e85c132fba01132935218a5a737cff"
+  },
+  {
+    "engine": "frodhes",
+    "repo": "https://github.com/leonardoMirabal/frodhes.git",
+    "commit": "5baa6f4425198e20b24429dfce22957a8490d77c"
+  },
+  {
+    "engine": "guru600",
+    "repo": "https://github.com/MarcGoudy/guru-600.git",
+    "commit": "3f6c7272108ab6d2a285f53f37c5dc7b008f3002"
+  },
+  {
+    "engine": "hortator",
+    "repo": "https://github.com/deadactive/hortator.git",
+    "commit": "44c9ad4aa57bebf63f412bd552e57143c30b4065"
+  },
+  {
+    "engine": "kwasub",
+    "repo": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1.git",
+    "commit": "866abfa25325d8dffedf262af5a25e52dc47d8c9"
+  },
+  {
+    "engine": "kwasub-kit",
+    "repo": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1.git",
+    "commit": "866abfa25325d8dffedf262af5a25e52dc47d8c9"
+  },
+  {
+    "engine": "mono2k",
+    "repo": "https://github.com/InigoHernandez/mono2k.git",
+    "commit": "95d5763495d961f3ed225f5e4201328934ca4247"
+  },
+  {
+    "engine": "obervave",
+    "repo": "https://github.com/zvenson/obervave.git",
+    "commit": "11fdbe330876bbcb59154b23ac8f474f088cb39f"
+  },
+  {
+    "engine": "prophet",
+    "repo": "https://github.com/keremimo/melodee.git",
+    "commit": "165d177a425944f3d30b0b669255a6ed0050c3a5"
+  },
+  {
+    "engine": "s1vave",
+    "repo": "https://github.com/AndrewGG88/S1Vave.git",
+    "commit": "cfdfc06f77c81ce7cacf8b4a57cb940b54bddfa9"
+  },
+  {
+    "engine": "aphex",
+    "repo": "https://github.com/filliformes/aphex-move",
+    "commit": "f568cc1ddb9b35536546a9d27b810ad13b57548e"
+  },
+  {
+    "engine": "braids",
+    "repo": "https://github.com/charlesvestal/schwung-braids",
+    "commit": "81fc3e87abcc19a65c5920d8524ed41a915feadb"
+  },
+  {
+    "engine": "dexed",
+    "repo": "https://github.com/charlesvestal/schwung-dx7",
+    "commit": "7efe26d03b9e8c8013cdf98008eb62150479f00d"
+  },
+  {
+    "engine": "hera",
+    "repo": "https://github.com/charlesvestal/schwung-hera",
+    "commit": "69773c9958f7414afc7a5b05df4c510ca1b15e36"
+  },
+  {
+    "engine": "plaits",
+    "repo": "https://github.com/j3threejay/move-anything-plaits",
+    "commit": "39c90e4ea8517f85117338338429acc3ce77c9b7"
+  },
+  {
+    "engine": "tenebrae",
+    "repo": "https://github.com/legsmechanical/schwung-tenebrae",
+    "commit": "eec3627efd5a09575f1a0a529fa169f1450af3f6"
+  },
+  {
+    "engine": "trmpc",
+    "repo": "https://github.com/sd88me/mpc-vst-TR-MPC",
+    "commit": "e511f73f48f6205df804ccc5389374c97257c7df",
+    "tag": "trmpc-vst-v1.2.1"
+  },
+  {
+    "engine": "6w6",
+    "repo": "https://github.com/sd88me/mpc-vst-TR-MPC",
+    "commit": "e511f73f48f6205df804ccc5389374c97257c7df",
+    "tag": "6w6-vst-v1.3.1"
+  },
+  {
+    "engine": "8w8",
+    "repo": "https://github.com/sd88me/mpc-vst-TR-MPC",
+    "commit": "e511f73f48f6205df804ccc5389374c97257c7df",
+    "tag": "8w8-vst-v1.3.1"
+  },
+  {
+    "engine": "cw78",
+    "repo": "https://github.com/sd88me/mpc-vst-TR-MPC",
+    "commit": "e511f73f48f6205df804ccc5389374c97257c7df",
+    "tag": "cw78-vst-v1.3.1"
+  },
+  {
+    "engine": "9w9",
+    "repo": "https://github.com/sd88me/mpc-vst-TR-MPC",
+    "commit": "e511f73f48f6205df804ccc5389374c97257c7df",
+    "tag": "9w9-vst-v1.3.1"
+  },
+  {
+    "engine": "kwasub-kit",
+    "repo": "https://github.com/Guizmoh/K-WASUB_Firmware_for_FM1.git",
+    "commit": "866abfa25325d8dffedf262af5a25e52dc47d8c9",
+    "variant": "Original drum mode of K-WASUB"
+  },
+  {
+    "engine": "sophie",
+    "repo": "https://github.com/mestela/schwung-sophie",
+    "commit": "abd132dc50b43f1f1bd775d3a9faf11e70fb9d9c"
+  }
+]

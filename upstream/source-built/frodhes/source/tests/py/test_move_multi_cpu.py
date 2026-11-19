@@ -1,0 +1,279 @@
+# SPDX-License-Identifier: GPL-3.0-only
+"""tools/move_multi_cpu.py without the Move: Schwung's debug_log_on made for a run and taken away after it, a flag
+the user had before kept (Schwung never trims debug.log: 43 MB on 2026-10-30 after two days on)"""
+import os
+import subprocess
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(ROOT, "tools"))
+import move_multi_cpu as mc  # noqa: E402
+
+
+class FakeMove:
+    """a shell on the Move that knows one file, the flag"""
+    def __init__(self, flag):
+        self.flag, self.cmds = flag, []
+
+    def __call__(self, cmd):
+        self.cmds.append(cmd)
+        if cmd.startswith("[ -f %s ]" % mc.LOG_FLAG):
+            if self.flag:
+                return b"kept\n"
+            self.flag = True
+            return b"made\n"
+        if cmd == "rm -f %s" % mc.LOG_FLAG:
+            self.flag = False
+            return b""
+        raise AssertionError(cmd)
+
+
+def test_log_flag_made_for_the_run_and_taken_away():
+    m = FakeMove(False)
+    made = mc.log_on(m)
+    assert made and m.flag
+    mc.log_off(made, m)
+    assert not m.flag and len(m.cmds) == 2
+
+
+def test_log_flag_set_before_is_kept():
+    m = FakeMove(True)
+    made = mc.log_on(m)
+    assert not made and m.flag
+    mc.log_off(made, m)
+    assert m.flag and len(m.cmds) == 1
+
+
+def test_log_on_runs_in_a_posix_shell(tmp_path):
+    """the command itself, in sh: makes the file once, says kept the second time"""
+    flag = str(tmp_path / "debug_log_on")
+    old = mc.LOG_FLAG
+    mc.LOG_FLAG = flag
+    try:
+        def sh(cmd):
+            return subprocess.run(["sh", "-c", cmd], capture_output=True).stdout
+        assert mc.log_on(sh) and os.path.exists(flag)
+        assert not mc.log_on(sh)
+        mc.log_off(True, sh)
+        assert not os.path.exists(flag)
+    finally:
+        mc.LOG_FLAG = old
+
+
+def _run(worst, n, **kw):
+    r = {"rings": {str(k): {"worst": w, "missing": 0} for k, w in enumerate(worst)}, "perf": {"overruns": 0},
+         "takes": [{"gated": 0} for _ in worst]}
+    r.update(kw)
+    return mc.verdict(r, n)
+
+
+def test_verdict_bars():
+    """one instance within U12 (725 us), two or three each within ~967 us, four reported only"""
+    assert _run([573], 1)[0] == "PASS"
+    assert _run([700], 1)[0] == "PASS" and "explain" in _run([700], 1)[1]   # +22 % re 0.9.9: a regression to explain
+    assert _run([726], 1)[0] == "FAIL"
+    assert _run([900, 960, 940], 3)[0] == "PASS"
+    assert _run([900, 970, 940], 3)[0] == "FAIL"
+    assert _run([1500] * 4, 4)[0] == "INFO"
+    assert _run([600, 600], 3)[0] == "FAIL"                                  # an instance's ring missing
+    assert _run([600], 1, perf={"overruns": 2})[0] == "FAIL"
+    assert _run([600], 1, takes=[{"gated": 1}])[0] == "FAIL"
+
+
+def test_verdict_overruns_over_idle():
+    """K2 (2026-11-13): Schwung's overrun counter runs at idle (173 /s on the Move, Frodhes idle); only the rate the
+    loads add fails a run (the 2026-11-13 runs: 160-173 /s under 2-3 instances against 173 /s idle: PASS)"""
+    assert _run([630, 640], 2, perf={"overruns": 5881, "overruns_per_s": 173.1}, idle={"overruns_per_s": 173.3})[0] == "PASS"
+    assert _run([630, 640], 2, perf={"overruns": 900, "overruns_per_s": 30.0}, idle={"overruns_per_s": 0.0})[0] == "FAIL"
+    assert _run([630, 640], 2, perf={"overruns": 9000, "overruns_per_s": 200.0}, idle={"overruns_per_s": 173.0})[0] == "FAIL"
+    assert _run([630, 640], 2, perf={"overruns": 60, "overruns_per_s": 1.5}, idle={"overruns_per_s": 0.0})[0] == "PASS"
+    assert _run([600], 1, perf={"overruns": 2})[0] == "FAIL"                 # no idle rate read: any overrun counts
+
+
+def _series(mean, spread, n, seed):
+    """per-second overrun rates: mean +- spread (Schwung's idle noise), n seconds"""
+    import numpy as np
+    return [round(float(x), 1) for x in mean + np.random.default_rng(seed).uniform(-spread, spread, n)]
+
+
+def test_ovr_series_from_perf_rows():
+    rows = [(10.0, {"overruns": 100}), (11.0, {"overruns": 270}), (12.5, {"overruns": 525})]
+    assert mc.ovr_series(rows) == [170.0, 170.0]
+
+
+def test_verdict_overruns_aba():
+    """A / B / A (T2 0.9.12, 2026-11-14): the idle rate swung 93-173 /s within minutes and one idle window before the
+    load failed 0.9.11 and 0.9.12 alike (n = 1: 169.0 /s loaded vs 131.0 idle on 0.9.11, 168.6 vs 135.2 on 0.9.12;
+    the idle windows read right after a load: 172.9-173.4, and once 92.9). The load is judged against the higher
+    median of the idle windows before and after it; an injected extra load still fails"""
+    # each build's recorded rates, the idle after a load at the 173 /s the windows after a load read: PASS
+    for idle0, load in ((131.0, 169.0), (135.2, 168.6)):
+        r = dict(perf={"overruns": 4900, "overruns_per_s": load, "series_ovr": _series(load, 4, 20, 1)},
+                 idle={"overruns_per_s": idle0, "series_ovr": _series(idle0, 20, 10, 2)},
+                 idle_after={"overruns_per_s": 173.0, "series_ovr": _series(173.0, 1, 12, 3)})
+        assert _run([624], 1, **r)[0] == "PASS", _run([624], 1, **r)
+        assert _run([624], 1, perf=r["perf"], idle=r["idle"])[0] == "FAIL"   # one idle window: the old false FAIL
+        # an extra load (a busy loop, a smaller CPU budget) adding 30 / 60 overruns a second over both idle windows
+        for extra in (30, 60):
+            hot = dict(r, perf=dict(r["perf"], series_ovr=_series(173.0 + extra, 4, 20, 4)))
+            v = _run([624], 1, **hot)
+            assert v[0] == "FAIL" and "A/B/A" in v[1], v
+    # the drift down between the windows (173 before, 93 after) and the load at the higher: PASS; over it by 2x the
+    # tolerance: FAIL
+    r = dict(perf={"overruns": 5000, "overruns_per_s": 170, "series_ovr": _series(171, 3, 20, 5)},
+             idle={"series_ovr": _series(173, 1, 10, 6)}, idle_after={"series_ovr": _series(93, 5, 12, 7)})
+    assert _run([630, 640], 2, **r)[0] == "PASS"
+    r["perf"] = dict(r["perf"], series_ovr=_series(173 + 2 * 17.3, 3, 20, 8))
+    assert _run([630, 640], 2, **r)[0] == "FAIL"
+
+
+# ---- pacing and the slots restored (K2: the 0.9.9 run of 2026-11-08, build/move/hil/multi/20261108-003510: the third
+# slot's upload hit "web param set ring full", the others broke on the barrier, Frodhes stayed in slots 3-4)
+RING = mc.move_ws.SchwungError("set_param failed: web param set ring full")
+
+
+class FakeSchwung:
+    """Schwung's WebSocket for the slots: module writes take effect when the next read comes (as slot_info does);
+    fail: errors the next reads raise in turn (the manager's answer to a refused write), one a read"""
+    def __init__(self, mods, fail=()):
+        self.mods, self.fail, self.writes, self.info, self.params = dict(mods), list(fail), [], {}, {}
+        self.pending = {}
+
+    def __call__(self):                          # (Slots' remote factory)
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def _read(self):
+        if self.fail:
+            e = self.fail.pop(0)
+            if e is not None:
+                self.pending.clear()             # (the refused write is lost)
+                raise e
+        self.mods.update(self.pending)
+        self.pending.clear()
+        for s, m in self.mods.items():
+            self.info[s] = {"synth": m}
+
+    def subscribe(self, s):
+        self._read()
+
+    def set_param(self, s, key, value):
+        self.writes.append((s, key, value))
+        if key == "synth:module":
+            self.pending[s] = value
+
+    def until(self, done, timeout=None):
+        self._read()
+        if not done(self):
+            raise TimeoutError("no answer")
+
+    def pump(self, secs):
+        self._read()
+
+
+def test_paced_retries_ring_full_and_raises_the_rest():
+    calls, slept = [], []
+
+    def fn():
+        calls.append(1)
+        if len(calls) < 3:
+            raise RING
+        return "ok"
+    assert mc.paced(fn, sleep=slept.append) == "ok" and slept == list(mc.RING_BACKOFF_S[:2])
+    calls.clear()
+    try:
+        mc.paced(lambda: (_ for _ in ()).throw(mc.move_ws.SchwungError("unknown key")), sleep=slept.append)
+        raise AssertionError("not raised")
+    except mc.move_ws.SchwungError as e:
+        assert "unknown key" in str(e)
+    try:
+        mc.paced(lambda: (_ for _ in ()).throw(RING), sleep=lambda s: None, backoff=(0.1,))
+        raise AssertionError("not raised")
+    except mc.move_ws.SchwungError as e:
+        assert mc.ring_full(e)
+
+
+def test_set_module_waits_for_slot_info_and_paces_ring_full():
+    w = FakeSchwung({0: "frodhes", 1: "", 2: "", 3: ""}, fail=[None, RING])   # (subscribe ok, the write refused)
+    log = []
+    assert mc.set_module(w, 2, "frodhes", sleep=lambda s: None, log=log)
+    assert w.mods[2] == "frodhes" and len([x for x in w.writes if x[0] == 2]) == 2 and len(log) == 1, (w.writes, log)
+    n = len(w.writes)
+    assert mc.set_module(w, 2, "frodhes", sleep=lambda s: None) and len(w.writes) == n   # (already there: no write)
+
+
+def test_load_fresh_reloads_a_slot_that_already_holds_frodhes():
+    """2026-11-14: after 0.9.12's install slot 1 still held the 0.9.11 instance loaded at the boot; a module write of
+    the same name reloads nothing, so n=1 measured 0.9.11. Every slot is emptied first, then 1..N loaded"""
+    w = FakeSchwung({0: "frodhes", 1: "frodhes", 2: "", 3: ""})
+    assert mc.load_fresh(w, [0, 1, 2, 3], [0], sleep=lambda s: None) == []
+    assert [x for x in w.writes if x[0] == 0] == [(0, "synth:module", ""), (0, "synth:module", "frodhes")], w.writes
+    assert w.mods == {0: "frodhes", 1: "", 2: "", 3: ""}
+
+
+def test_verdict_fails_on_mixed_builds():
+    """the instances' r_version must agree: a stale instance beside a new one is not a measurement of either"""
+    assert _run([600, 610], 2, versions={1: "0.9.11", 2: "DEV 4f5a"})[0] == "FAIL"
+    assert _run([600, 610], 2, versions={1: "DEV 4f5a", 2: "DEV 4f5a"})[0] == "PASS"
+
+
+def test_slots_restored_after_a_crash():
+    """a run that loads Frodhes into slots 3-4 and then crashes: the modules come back as they were (slot 2's other
+    module untouched), and slot 1's Frodhes gets its parameters back"""
+    w = FakeSchwung({0: "frodhes", 1: "other", 2: "", 3: ""})
+    restored = []
+    try:
+        with mc.Slots("ws://x", [0, 2, 3], remote=w, state_read=lambda url, s: {"preset": "3"},
+                      state_restore=lambda url, s, st: restored.append((s, st)) or (["preset"], {}),
+                      sleep=lambda s: None) as ks:
+            for s in (2, 3):
+                mc.set_module(w, s, "frodhes", sleep=lambda s: None)
+            raise RuntimeError("BrokenBarrierError")
+    except RuntimeError:
+        pass
+    assert w.mods == {0: "frodhes", 1: "other", 2: "", 3: ""}, w.mods
+    assert ks.report["verdict"] == "PASS" and restored == [(0, {"preset": "3"})], ks.report
+
+
+def test_slots_restore_says_when_it_cannot():
+    w = FakeSchwung({0: "frodhes", 1: "", 2: "", 3: ""})
+    ks = mc.Slots("ws://x", [0, 1], remote=w, state_read=lambda url, s: {},
+                  state_restore=lambda url, s, st: ([], {"p_tone": ("1", "2")}), sleep=lambda s: None)
+    with ks:
+        mc.set_module(w, 1, "frodhes", sleep=lambda s: None)
+        w.fail = [None] + [RING] * 10                 # (the manager's ring stays full: the empty write never lands)
+    assert ks.report["verdict"].startswith("FAIL") and "not restored" in ks.report["verdict"], ks.report
+
+
+def test_paced_play_uploads_again_on_ring_full():
+    """a take's upload that hits the ring is uploaded again whole ("begin" first), and "go" comes after the barrier"""
+    import threading
+
+    class R(FakeSchwung):
+        pass
+    r = R({0: "frodhes"}, fail=[RING])               # (the first upload's closing pump: refused)
+    up, bar = threading.Lock(), threading.Barrier(1)
+    log = []
+    mc.paced_play(r, up, bar, sleep=lambda s: None, log=log)
+    r.play(0, "t1", 1000, [(10, 0x90, 60, 100), (500, 0x80, 60, 0)])
+    begins = [x for x in r.writes if x[1].endswith(":dev_play") and str(x[2]).startswith("begin")]
+    gos = [x for x in r.writes if x[1].endswith(":dev_play") and str(x[2]).startswith("go")]
+    assert len(begins) == 2 and len(gos) == 1 and r.writes[-1] == gos[0] and len(log) == 1, r.writes
+
+
+def test_paced_play_aborts_the_barrier_when_the_upload_fails():
+    import threading
+    r = FakeSchwung({0: "frodhes"}, fail=[mc.move_ws.SchwungError("dev_play refused")])
+    bar = threading.Barrier(2)
+    mc.paced_play(r, threading.Lock(), bar, sleep=lambda s: None)
+    try:
+        r.play(0, "t1", 1000, [(10, 0x90, 60, 100)])
+        raise AssertionError("not raised")
+    except mc.move_ws.SchwungError:
+        pass
+    assert bar.broken

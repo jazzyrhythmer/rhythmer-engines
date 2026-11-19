@@ -1,0 +1,29 @@
+{
+  "id": "obervave",
+  "name": "OberVave",
+  "repo": "https://github.com/zvenson/obervave.git",
+  "commit": "11fdbe330876bbcb59154b23ac8f474f088cb39f",
+  "adapter": "obv_native.c",
+  "files": {
+    "firmware/src/obv_dsp.h": "31340d284b35f0e5657eefab371a8828ab53b02e7c260a24d9b0d57ff792dcf5",
+    "firmware/src/obv_params.h": "a7df72dbe65eb4fb88a8092229a1c44c526f3ea2a54d2b58cb9b01bf0dc2615a",
+    "firmware/src/obv_fx.h": "ac0d7f338d0f09f0c58e9119917537da3711264289361f1501f857eed6fae368",
+    "firmware/src/obv_engine.h": "9ec89d4e4b9e4fc03ac6fc4ad34d8dd90b4d4398972d41d7de7f4771feeb4507",
+    "firmware/src/obv_patches.h": "e1f25415dab1acebee57f3702549f1f2aaed2a7861b315db3770759cc79008b6",
+    "firmware/gen/obv_tables.h": "68fc7929e13d8ce12e3acd91bee09a8145d28fd21db87740baf98a2a75578692"
+  },
+  "display_source": {
+    "commit": "11fdbe330876bbcb59154b23ac8f474f088cb39f",
+    "file": "firmware/src/obervave.c",
+    "sha256": "d96eb19b410ea3ae906d4f0d10d7412ff0a7e337ea43691d178355cd2a9c8ad4",
+    "functions": [
+      "fmt_u",
+      "slen",
+      "scat",
+      "fmt_ms",
+      "param_value"
+    ],
+    "adapter_fragment": "ports/common/obervave_display.h",
+    "fragment_sha256": "14887fcd3938079bba78d84881c5cb91c6aae31d9f5b815bc5387bf6b0a9d251"
+  }
+}

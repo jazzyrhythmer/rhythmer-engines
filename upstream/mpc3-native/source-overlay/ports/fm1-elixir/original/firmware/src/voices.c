@@ -1,0 +1,1268 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Elixir: the LXR-02's six voices, their LFOs and the mixer, in fixed point.
+ * Ported from the LXR firmware, Core/Src/Soundengine/DSPAudio (DrumVoice.c, Snare.c, CymbalVoice.c, HiHat.c,
+ * lfo.c, mixer.c), Copyright (C) 2012-2026 Erica Synths, GPL-3.0-only.
+ *
+ * Voices 0..2 DRUM (main + FM/mix oscillator), 3 SNARE (oscillator + filtered noise), 4 CYMBAL and 5 HIHAT (three
+ * operator FM); track 7 (index 6) plays the hi-hat voice with its open decay. Each voice: a transient generator,
+ * an amp EG (repeat for claps), a filter, a waveshaper, a sample rate reducer, pan and an output (left/right/both).
+ * The FM-1 has one stereo output: the LXR's two stereo pairs and four mono outs all go to it (a mono out to its
+ * side), so a kit keeps its routing. Elixir's sends: FX SEND, how much of the voice goes through the FX bus instead
+ * of its output (127: all, the LXR's Out = FX BUS, which a kit from before the sends still means), and REVERB
+ * SEND, the voice into the reverb (reverb.c) on top of that.
+ *
+ * Elixir's sound shaping (0.3), each voice: a choice of waveshaper for its DRIVE (the LXR's curve, or FOLD, CLIP,
+ * ASYM, RECTIFY: shape_block); after the sample rate reducer a bit reducer and a tilt EQ (post_block); random per
+ * hit (pitch, decay, filter, pan: voice_trigger); a choke group (a hit fades the other voices of its group out in a
+ * block); cross modulation from another voice (DUCK: its envelope turns this one down, FILTER: opens this one's
+ * filter, RING: multiplies the two). The voices render first, then the cross modulation, then the mixer. */
+
+#define NVOICE 6
+#define NTRACK 7
+enum { V_DRUM1, V_DRUM2, V_DRUM3, V_SNARE, V_CYM, V_HAT };
+enum { SH_LXR, SH_FOLD, SH_CLIP, SH_ASYM, SH_RECT, SH_FUZZ, SH_TAPE, SH_SFOLD, SH_BITE, NSHAPE };   /* the waveshapers
+                                                                  * (shape_block; 23a: FUZZ .. BITE) */
+enum { XM_DUCK, XM_FILTER, XM_RING, NXMODE };                  /* the cross modulation's modes (xmod_block) */
+
+typedef struct {
+    uint32_t phase, inc;         /* the free running increment (rate or sync) */
+    uint32_t offset;             /* retrigger phase */
+    int32_t rnd;                 /* S&H, Q16; SMOOTH, DRIFT: the value it glides to */
+    int32_t rnd0;                /* .. SMOOTH, DRIFT: the value it glides from (1.1) */
+    uint32_t rate;               /* the rate setting 0..1 (Q16), for a tempo change */
+    uint8_t wave, retrig, sync;
+    uint8_t mode, run;           /* 0.13: LM_* (Elixir's LFO MODE); ONE, HALF: still running since the hit */
+    uint32_t gone;               /* .. ONE, HALF: the phase run since the hit */
+    int32_t hold;                /* .. HOLD: the value at the hit, Q16 */
+} lfo_t;
+
+typedef struct {
+    uint16_t dest;               /* the parameter, 0 = none */
+    int32_t amount;              /* Q16 */
+    int32_t last;                /* the last source value, Q16 (0..65536) */
+    int32_t nv;                  /* 25b: the value it set this block (0..65536), -1 none (sound.c modnodes_block) */
+} modnode_t;
+
+typedef struct {
+    osc_t osc, mod, mod2;        /* DRUM: osc + mod; SNARE: osc + mod (the noise); CYMBAL / HIHAT: all three */
+    trans_t tr;
+    int32_t snap;                /* snapEg value, Q16 */
+    decay_eg_t peg;              /* the pitch / mod EG (DRUM, SNARE) */
+    slope_eg_t aeg;
+    svf_t flt;
+    uint8_t ftype, mix_oscs, vol_mod, is_open;
+    uint8_t pan, route, out_fx;  /* out_fx: the LXR's Out = FX BUS (a kit from before the sends) */
+    int32_t fx_send, rev_send;   /* Q15 */
+    int32_t dly_send;            /* Q15 (1.0 Phase 16: into the delay, on top of the output) */
+    int32_t fm1, fm2;            /* DRUM: FM amount; CYMBAL / HIHAT: the two modulators' gains. Q15 */
+    int32_t peg_amt;             /* pitch EG depth, Q16 */
+    int32_t mix;                 /* SNARE: noise / osc mix, Q15 */
+    int32_t vol;                 /* Q15 */
+    int32_t velo;                /* Q15 */
+    uint32_t pwm;                /* Q16 */
+    uint32_t pmod;               /* the oscillator's pitchMod this block, Q16 */
+    int32_t dk;                  /* waveshaper k, Q8; dks: DRUM's smoothed copy (Q16) */
+    int32_t dks;
+    int32_t vol_s;               /* DRUM: the volume, smoothed per sample (Q24) */
+    int32_t gain, last_gain;     /* DRUM: amp EG this block / the last (Q24); others: gain (Q24) */
+    uint32_t dec_closed, dec_open;
+    int16_t pan_l, pan_r;        /* latched at the trigger (USE_TRIGGERED_PAN) */
+    uint32_t dec_cnt;            /* the sample rate reducer, Q16 */
+    int16_t dec_hold;
+    lfo_t lfo;
+    lfo_t lfo2;                  /* 25b: the track's LFO 2 (sound.c PAR_L2RATE1 ..: its target is its own voice's) */
+    /* Elixir's shaping (sound.c sets them) */
+    uint8_t bits, shape, tilt, choke_grp, xsrc, xmode;
+    uint8_t rnd[4];              /* random per hit: pitch, decay, filter, pan amounts (0..127) */
+    uint8_t choking;             /* choked: fading out (1), silent (2) until its next hit */
+    uint8_t throw_rev, throw_fx; /* PERF's THROW: the send at 127 while held (perform.c) */
+    uint8_t gate;                /* 19b: GATE: the amp EG holds for the note's length (seq.c gate_start) */
+    int32_t drive;               /* DRIVE 0..1, Q16 (the shapers but the LXR's) */
+    int32_t xamt;                /* Q15 */
+    uint32_t dec_base;           /* the amp EG's decay as set (random per hit scales aeg.dec from it) */
+    uint32_t rp;                 /* this hit's random pitch factor, Q16 */
+    int32_t rnd_f;               /* .. its random cutoff offset, Q16 */
+    int32_t tilt_lp, sh_dc;      /* the tilt EQ's low-pass, RECTIFY's and BITE's DC follower */
+    int32_t sh_z;                /* 23a: TAPE's high cut, BITE's last sample */
+} voice_t;
+
+static voice_t vc[NVOICE];
+static int16_t flt_line[NVOICE][FLT_LINE] RAMBUF;   /* 28: the COMB filter's line per voice (6 KB) */
+/* 0.9: the DRUM voices' MODEL section: Rings' resonators (rings.c; 0.6's physical models: physmodels.c, not built);
+ * 0.15: Plaits' engines (plaits.c) */
+#include "rings.c"
+#include "plaits.c"
+#include "micro.c"                                  /* (Phase 24: MICRO, on every voice) */
+#include "ensemble.c"                               /* (0.25: ENSEMBLE, on every voice) */
+#include "noise.c"                                  /* (1.0, 10c: NOISE, on every voice) */
+
+static uint32_t decim_rate[NVOICE + 1];          /* [6]: ALL (the PERF page's global reducer). Q16 */
+static modnode_t velo_mod[NVOICE], lfo_mod[NVOICE], lfo2_mod[NVOICE];
+static uint32_t seq_bpm_x10 = 1200;               /* the tempo the LFO sync follows */
+static volatile uint32_t trig_count[NTRACK];         /* triggers of each track (the UI flashes its key) */
+static uint32_t rev_g = 65536u;                      /* 19c: the reverb sends moved by the global LFOs, Q16 (0 .. 2) */
+static uint8_t rp_scaled;                            /* 19a: the next hit's random pitch is in the scale's degrees
+                                                      * (seq.c seq_trigger): no bend */
+static int32_t venv[NVOICE];                         /* each voice's output envelope, Q15 (cross modulation) */
+static int32_t vpk[NVOICE];                          /* 1.0 Phase 11: .. its last block's peak, Q15 (a global LFO's FOLLOW) */
+static uint32_t tape_q16 = 65536u;                   /* PERF's TAPE STOP: every voice's pitch (and the tempo), Q16 */
+static int32_t exp2_q16(int32_t y);                  /* (fxbus.c) */
+/* random per hit: its own generator (the noise oscillators' sequence stays as the LXR's), -32768 .. 32767 */
+static uint32_t hit_rng = 0x2545F491u;
+static int32_t hit_rand(void)
+{
+    hit_rng ^= hit_rng << 13;
+    hit_rng ^= hit_rng >> 17;
+    hit_rng ^= hit_rng << 5;
+    return (int32_t)(hit_rng >> 16) - 32768;
+}
+
+/* -------------------------------------------------------------- LFO --- */
+/* 1.1: SMOOTH, RANDOM's draws joined by a half cosine; DRIFT, the same glide to a step of up to a quarter from where
+ * it is (a random walk, turned back at the ends). Past the LXR's eight: an LXR-02 .SND gets RANDOM (library.js) */
+enum { LFO_SINE, LFO_TRI, LFO_SAW_UP, LFO_SAW_DOWN, LFO_REC, LFO_NOISE, LFO_EXP_UP, LFO_EXP_DOWN, LFO_SMOOTH, LFO_DRIFT,
+       NLFO };
+static inline int lfo_glides(uint32_t w) { return w == LFO_SMOOTH || w == LFO_DRIFT; }
+/* 0.13: the LFO's mode, as Elektron's (Elixir's LFO MODE). What restarts it is the LXR's RETRIGGER voice; in HOLD,
+ * ONE and HALF with RETRIGGER off, its own voice's hits.
+ *   TRIG  the LXR's: a hit starts the cycle again from the offset (RETRIGGER off: it runs free)
+ *   HOLD  runs free; a hit takes its value then and holds it until the next
+ *   ONE   a hit starts it from the offset, it runs one cycle and stops at its end (still until the first hit)
+ *   HALF  the same, half a cycle */
+enum { LM_TRIG, LM_HOLD, LM_ONE, LM_HALF, NLFOMODE };
+/* lfo_calcPhaseInc's scaler (cycles in 4 bars) x 15: the LXR's 11 (4/1 .. 1/32, 1/3 1/6 1/12 shown as the triplets
+ * 1/2T 1/4T 1/8T), then (1.0) 3/4, 3/8, 5/16, 3/16 (in the packed slot's 4 bits: the kits as they were). The knob turns
+ * through them by length (ui.c SYNC_ORDER) */
+#define NSYNC 16u
+static const uint16_t SYNC_SCALE_X60[NSYNC] = {0, 15, 30, 60, 120, 180, 240, 360, 480, 720, 960, 1920, 80, 160, 192, 320};
+static const uint8_t SYNC_ORDER[NSYNC] = {0, 11, 10, 9, 8, 7, 15, 6, 14, 5, 13, 4, 12, 3, 2, 1};   /* (OFF, then fast ..
+                                                                                         * slow: the knob's, a CC's) */
+static int is_lfo_sync(uint32_t p);                  /* (sound.c) */
+
+static void lfo_update_inc(lfo_t *l)                 /* lfo_setFreq / lfo_setSync */
+{
+    if (!l->sync || l->sync >= NSYNC) {
+        l->inc = lut1024u(LFO_INC, l->rate);
+    } else {
+        /* bpm / 60 / 4 x scaler cycles a second, / (FS / BLOCK) a block. The LXR's (a whole scaler) as it divides;
+         * 1.0's thirds and fifths times 2^64 / (15 x the divisor) (a constant: no 64-bit divide on the target) */
+        uint32_t s = SYNC_SCALE_X60[l->sync];
+        if (s % 15u == 0u)
+            l->inc = (uint32_t)((((uint64_t)seq_bpm_x10 * (s / 15u) * BLOCK) << 32) / (uint32_t)(10u * 60u * 4u * 4u * FS));
+        else
+            l->inc = (uint32_t)(((uint64_t)(seq_bpm_x10 * s * BLOCK) *
+                                 (uint32_t)(0xFFFFFFFFFFFFFFFFull / (15ull * 10u * 60u * 4u * 4u * FS))) >> 32);
+    }
+}
+static void lfo_recalc_sync(void)
+{
+    uint32_t i;
+    for (i = 0; i < NVOICE; i++) {
+        lfo_update_inc(&vc[i].lfo);
+        lfo_update_inc(&vc[i].lfo2);
+    }
+}
+/* 1.1: SMOOTH, DRIFT: a new draw r (0..65535), the glide from 'from' to it (DRIFT: a step from 'from') */
+static void lfo_next(lfo_t *l, int32_t from, uint32_t r)
+{
+    int32_t t = (int32_t)(r & 0xFFFFu);
+    l->rnd0 = from;
+    if (l->wave == LFO_DRIFT) {
+        t = from + ((t - 32768) >> 1);
+        t = t < 0 ? -t : t > 65535 ? 131070 - t : t;
+    }
+    l->rnd = t;
+}
+static int32_t lfo_glide(const lfo_t *l)             /* .. at the phase: a half cosine, rnd0 at 0 .. rnd at the end */
+{
+    int32_t w = (int32_t)((uint32_t)(RG_SINE[((l->phase >> 21) + 3072u) & 4095u] + 32767) * 65536u / 65534u);
+    return l->rnd0 + (int32_t)(((int64_t)(l->rnd - l->rnd0) * w) >> 16);
+}
+static int32_t lfo_wave(lfo_t *l, uint32_t old)      /* the wave at the phase (from old: RANDOM's draw), 0..1, Q16 */
+{
+    switch (l->wave) {
+    case LFO_SINE:
+        return (int32_t)((uint32_t)(RG_SINE[((l->phase >> 20) + 3072u) & 4095u] + 32767) * 65536u / 65534u);
+    case LFO_TRI: {
+        uint32_t p = l->phase >> 15;                  /* 17 bits */
+        return 65536 - iabs((int32_t)p - 65536);
+    }
+    case LFO_SAW_UP:
+        return (int32_t)(l->phase >> 16);
+    case LFO_REC:
+        return l->phase > 0x7FFFFFFFu ? 65536 : 0;
+    case LFO_NOISE:
+        if (old > l->phase)
+            l->rnd = (int32_t)(noise_next() >> 16);
+        return l->rnd;
+    case LFO_SMOOTH:
+    case LFO_DRIFT:
+        if (old > l->phase)
+            lfo_next(l, l->rnd, noise_next() >> 16);
+        return lfo_glide(l);
+    case LFO_SAW_DOWN:
+        return (int32_t)((0xFFFFFFFFu - l->phase) >> 16);
+    case LFO_EXP_UP: {
+        int64_t x = l->phase >> 16;
+        return (int32_t)((x * x * x) >> 32);
+    }
+    case LFO_EXP_DOWN: {
+        int64_t x = (0xFFFFFFFFu - l->phase) >> 16;
+        return (int32_t)((x * x * x) >> 32);
+    }
+    default:
+        return 0;
+    }
+}
+static int32_t lfo_calc(lfo_t *l)                    /* lfo_calc: 0..1, Q16 */
+{
+    uint32_t old = l->phase;
+    int32_t v;
+    if (l->mode >= LM_ONE) {                         /* 0.13: ONE, HALF: to the cycle's (half's) end, then still */
+        uint32_t end = l->mode == LM_ONE ? 0xFFFFFFFFu : 0x80000000u;
+        if (l->run) {
+            uint32_t d = end - l->gone < l->inc ? end - l->gone : l->inc;
+            l->phase += d;
+            l->gone += d;
+            l->run = l->gone < end;
+        }
+    } else {
+        l->phase += l->inc;
+    }
+    v = lfo_wave(l, old);
+    return l->mode == LM_HOLD ? l->hold : v;
+}
+static void lfo_mode_set(lfo_t *l, uint32_t m)       /* 0.13: ONE, HALF wait at the offset; HOLD from its value now */
+{
+    if (l->mode == m)
+        return;
+    l->mode = (uint8_t)m;
+    l->run = 0;
+    l->gone = 0;
+    if (m >= LM_ONE)
+        l->phase = l->offset;
+    l->hold = lfo_wave(l, l->phase);
+}
+static void lfo_hit(lfo_t *l)                        /* a trigger, as its mode takes it */
+{
+    if (l->mode == LM_HOLD) {
+        l->hold = lfo_wave(l, l->phase);
+        return;
+    }
+    if (lfo_glides(l->wave))                         /* (1.1: a new glide each hit, from where it is) */
+        lfo_next(l, lfo_wave(l, l->phase), noise_next() >> 16);
+    l->phase = l->offset;
+    if (l->mode >= LM_ONE) {
+        l->gone = 0;
+        l->run = 1;
+        if (l->wave == LFO_NOISE)                    /* (a new value each one-shot) */
+            l->rnd = (int32_t)(noise_next() >> 16);
+    }
+}
+static void lfo_retrigger(uint32_t voice)            /* a voice was triggered: the LFOs that follow it restart */
+{
+    uint32_t i;
+    for (i = 0; i < 2u * NVOICE; i++) {              /* (25b: LFO 2 as LFO 1) */
+        lfo_t *l = i < NVOICE ? &vc[i].lfo : &vc[i - NVOICE].lfo2;
+        uint32_t src = l->retrig ? l->retrig : l->mode != LM_TRIG ? i % NVOICE + 1u : 0u;
+        if (src == voice + 1u)
+            lfo_hit(l);
+    }
+}
+
+/* --------------------------------------------------------- triggers --- */
+static void modnode_update(modnode_t *m, int32_t val);   /* (sound.c) */
+
+static void voice_pan_latch(voice_t *v)
+{
+    int32_t p = v->pan & 127u;
+    if (v->rnd[3])                                   /* random pan: up to +-64 */
+        p = clamp32(p + hit_rand() * v->rnd[3] / (127 * 512), 0, 127);
+    v->pan_l = (int16_t)(PAN_L[p] >> 1);             /* (Q14: 32768 would not fit) */
+    v->pan_r = (int16_t)(PAN_R[p] >> 1);
+}
+
+static uint32_t trans_offset(const voice_t *v)       /* OFFSET mode: 1 - the transient's volume, Q16 */
+{
+    return v->tr.wave == TR_OFFSET ? (uint32_t)(65536 - (v->tr.vol << 1)) : 65536u;
+}
+
+/* 28: COMB and RESONATOR follow the played note (60: as set) */
+static void flt_key(svf_t *f, uint32_t note)
+{
+    int8_t k = (int8_t)((int32_t)note - SEQ_DEFAULT_NOTE);
+    if (f->key != k) {
+        f->key = k;
+        f->dirty = 1;
+    }
+}
+
+static void voice_trigger(uint32_t track, uint32_t vel, uint32_t note)
+{
+    uint32_t vi = track < V_HAT ? track : V_HAT;
+    voice_t *v = &vc[vi];
+    if (track < NTRACK)
+        trig_count[track]++;
+    lfo_retrigger(vi);
+    modnode_update(&velo_mod[vi], (int32_t)(vel * 65536u / 127u));
+    v->velo = (int32_t)(vel * 32768u / 127u);
+    if (vi <= V_DRUM3) {                                 /* Drum_trigger */
+        osc_reset_phase(&v->osc, trans_offset(v), 1);
+        osc_reset_phase(&v->mod, 65536u, 1);
+        osc_base_note(&v->osc, note);
+        osc_base_note(&v->mod, note);
+        v->peg.value = EG_ONE;
+        svf_reset(&v->flt);
+    } else if (vi == V_SNARE) {                          /* Snare_trigger */
+        osc_reset_phase(&v->osc, trans_offset(v), 0);
+        v->peg.value = EG_ONE;
+        osc_base_note(&v->osc, note);
+    } else {                                             /* Cymbal_trigger, HiHat_trigger */
+        osc_reset_phase(&v->osc, trans_offset(v), 0);
+        v->mod.phase = v->mod2.phase = 0;
+        osc_base_note(&v->osc, note);
+        osc_base_note(&v->mod, note);
+        osc_base_note(&v->mod2, note);
+        if (vi == V_HAT) {
+            v->is_open = track == 6u;
+            v->aeg.dec = v->is_open ? v->dec_open : v->dec_closed;
+        }
+    }
+    /* random per hit: pitch (up to an octave either way, the amount squared: fine at small amounts), decay (x0.5 ..
+     * x2 of its time), cutoff (up to half its range either way) */
+    v->rp = v->rnd[0] && !rp_scaled ? (uint32_t)exp2_q16(hit_rand() * v->rnd[0] * v->rnd[0] * 2 / 16129) : 65536u;
+    rp_scaled = 0;                                   /* (Q16 octaves) */
+    if (mi[vi].type)                                 /* (24: a MICRO sound's, at the voice's next block) */
+        mi_trigger(vi, vel);
+    else if (eno[vi].on)                              /* (0.25: ENSEMBLE's phases) */
+        en_trigger(vi);
+    else if (vi <= V_DRUM3 && mdl[vi].type >= MD_PL0)    /* (0.15: a Plaits engine's) */
+        pl_trigger(vi, vel);
+    else if (vi <= V_DRUM3 && mdl[vi].type)              /* (0.6: a model's strike, at the hit's pitch) */
+        model_trigger(vi, vel, (uint32_t)(((uint64_t)v->osc.note_inc * v->rp) >> 16));
+    if (v->rnd[1]) {
+        uint32_t base = vi == V_HAT ? v->aeg.dec : v->dec_base;
+        int32_t y = hit_rand() * v->rnd[1] / 127 * 2;   /* (Q16 octaves of time) */
+        v->aeg.dec = (uint32_t)(((uint64_t)base * (uint32_t)exp2_q16(-y)) >> 16);
+    } else if (vi != V_HAT) {
+        v->aeg.dec = v->dec_base;
+    }
+    v->rnd_f = v->rnd[2] ? hit_rand() * v->rnd[2] / 127 : 0;
+    flt_key(&v->flt, v->osc.base_note);
+    if (v->choke_grp) {                              /* the choke group: the others fade out */
+        uint32_t w;
+        for (w = 0; w < NVOICE; w++)
+            if (w != vi && vc[w].choke_grp == v->choke_grp && !vc[w].choking)
+                vc[w].choking = 1;
+    }
+    v->choking = 0;
+    slope_trigger(&v->aeg);
+    v->tr.phase = 0;
+    v->snap = 65536;
+    voice_pan_latch(v);
+}
+
+/* 19b: GATE. A note held (on: the voice's GATE on) or let go: the amp EG's top held until then, then its decay */
+static void voice_hold(uint32_t track, int on)
+{
+    slope_eg_t *e = &vc[track < V_HAT ? track : V_HAT].aeg;
+    if (on) {
+        e->hold = vc[track < V_HAT ? track : V_HAT].gate;
+        return;
+    }
+    e->hold = 0;
+    if (e->state == EG_H)
+        e->state = EG_D;
+}
+/* .. a tied note's next: the voice's pitch there, nothing struck again (legato) */
+static void voice_legato(uint32_t track, uint32_t note)
+{
+    uint32_t vi = track < V_HAT ? track : V_HAT;
+    voice_t *v = &vc[vi];
+    if (track < NTRACK)
+        trig_count[track]++;
+    osc_base_note(&v->osc, note);
+    if (vi != V_SNARE)
+        osc_base_note(&v->mod, note);
+    if (vi >= V_CYM)
+        osc_base_note(&v->mod2, note);
+    flt_key(&v->flt, v->osc.base_note);
+}
+
+/* ---------------------------------------------------- the block, async --- */
+/* calcDrumVoiceAsync / Snare_calcAsync / Cymbal_calcAsync / HiHat_calcAsync: envelopes and pitches, once a block */
+static void voice_async(uint32_t vi)
+{
+    voice_t *v = &vc[vi];
+    uint32_t rp = tape_q16 == 65536u ? v->rp : (uint32_t)(((uint64_t)v->rp * tape_q16) >> 16);
+    if (vi <= V_DRUM3 || vi == V_SNARE) {
+        int32_t pe = decay_calc(&v->peg);                /* Q24 */
+        uint32_t pmod = 65536u + (uint32_t)(((int64_t)pe * v->peg_amt) >> 24);
+        if (v->tr.wave == TR_SNAP && !mi[vi].type && !eno[vi].on && !nzo[vi].on)   /* (MICRO, ENSEMBLE, NOISE have no
+                                                      * transient) */
+            pmod += (uint32_t)(((int64_t)snap_calc(&v->snap, v->tr.inc) * v->tr.vol) >> 15);
+        pmod = rp == 65536u ? pmod : (uint32_t)(((uint64_t)pmod * rp) >> 16);   /* (random pitch, tape) */
+        v->pmod = pmod;
+        if (vi <= V_DRUM3) {
+            v->fm2 = (int32_t)(((int64_t)v->fm1 * pe) >> 24);   /* osc.fmMod = fmModAmount x egPitchVal */
+            if (v->aeg.atk == EG_ONE && (v->aeg.state == EG_A || v->aeg.state == EG_REPEAT)) {
+                v->gain = slope_calc(&v->aeg);           /* attack 0: no ramp */
+                v->last_gain = v->gain;
+            } else {
+                v->last_gain = v->gain;
+                v->gain = slope_calc(&v->aeg);
+            }
+            osc_set_freq(&v->osc, pmod);
+            osc_set_freq(&v->mod, rp);
+        } else {
+            v->gain = slope_calc(&v->aeg);
+            osc_set_freq(&v->osc, pmod);
+            osc_set_freq(&v->mod, rp);
+        }
+    } else {
+        v->gain = slope_calc(&v->aeg);
+        if (v->tr.wave == TR_SNAP && !mi[vi].type && !eno[vi].on && !nzo[vi].on)
+            v->pmod = 65536u + (uint32_t)(((int64_t)snap_calc(&v->snap, v->tr.inc) * v->tr.vol) >> 15);
+        osc_set_freq(&v->osc, rp == 65536u ? v->pmod : (uint32_t)(((uint64_t)v->pmod * rp) >> 16));
+        osc_set_freq(&v->mod, rp);
+        osc_set_freq(&v->mod2, rp);
+    }
+    v->flt.eg = v->gain >> 8;                        /* (1.0: ENV AMT's envelope, dsp.c ch_block) */
+}
+
+/* ------------------------------------------------------- the block, sync --- */
+static void add_sat(int16_t *a, const int16_t *b)
+{
+    uint32_t i;
+    for (i = 0; i < BLOCK; i++)
+        a[i] = (int16_t)sat16(a[i] + b[i]);
+}
+
+/* the voice's volume x gain (Q15 x Q24) as Q15, and the velocity when VOL MOD is on */
+static int32_t combined_q15(const voice_t *v)
+{
+    int64_t c = ((int64_t)v->vol * v->gain) >> 24;
+    if (v->vol_mod)
+        c = (c * v->velo) >> 15;
+    return (int32_t)c;
+}
+
+/* the waveshaper of the voice's DRIVE, but the LXR's (its curve: dist_sample): the drive a gain of 1 .. 8, then
+ * FOLD (folds back from full scale, a triangle), CLIP (hard), ASYM (the positive half soft, the negative clipped
+ * lower: even harmonics), RECTIFY (full wave, the octave up; its DC followed and taken out). 23a: FUZZ (a gain of 4
+ * .. 56 into a hard clip, the quietest of the tail gated down), TAPE (a cubic soft clip, then a high cut from ~11 kHz
+ * down to ~5 kHz with the drive: 0.8 .. 0.5), SINE FOLD (a sine of the input: West Coast folds, two turns at the
+ * most), BITE (the highs pushed, then a biased soft clip harder with the drive: an overdrive that bites; its DC taken
+ * out) */
+static inline int32_t soft3(int32_t x)               /* x - 4/27 x^3 over -1.5 .. 1.5 (Q15): full scale at 1.5 */
+{
+    int32_t x3;
+    x = clamp32(x, -49152, 49152);
+    x3 = (int32_t)((((int64_t)x * x >> 15) * x) >> 15);
+    return x - ((x3 * 4855) >> 15);
+}
+static void shape_block(voice_t *v, int16_t *buf)
+{
+    uint32_t i;
+    int32_t g = 65536 + 7 * v->drive, lo = -32767 + (int32_t)(((int64_t)v->drive * 22000) >> 16);
+    for (i = 0; i < BLOCK; i++) {
+        int32_t a = (int32_t)(((int64_t)buf[i] * g) >> 16), y;
+        switch (v->shape) {
+        case SH_FOLD:
+            if (a > 32767 || a < -32767) {
+                int32_t t = (a + 32767) % (4 * 32767);
+                if (t < 0)
+                    t += 4 * 32767;
+                a = t < 2 * 32767 ? t - 32767 : 3 * 32767 - t;
+            }
+            y = a;
+            break;
+        case SH_CLIP:
+            y = sat16(a);
+            break;
+        case SH_ASYM:
+            y = a >= 0 ? dist_sample(sat16(a), 1024) : (a < lo ? lo : a);
+            break;
+        case SH_RECT:
+            y = iabs(a) * 2;
+            v->sh_dc += (y - v->sh_dc) >> 8;
+            y = sat16(y - v->sh_dc);
+            break;
+        case SH_FUZZ:
+            y = sat16((int32_t)(((int64_t)a * (4 * 65536 + 3 * v->drive)) >> 16));   /* (a x 4 .. 7) */
+            if (iabs(buf[i]) < 256)                  /* (the gate: below -42 dB, down with the input) */
+                y = (y * iabs(buf[i])) >> 8;
+            break;
+        case SH_TAPE:
+            v->sh_z += (int32_t)(((int64_t)(soft3(a) - v->sh_z) * (26214 - ((v->drive * 9830) >> 16))) >> 15);
+            y = sat16(v->sh_z);
+            break;
+        case SH_SFOLD:
+            y = sine_at(((uint32_t)a << 15) + 0x40000000u);   /* (sin: the LXR's table is -cos; full scale a
+                                                              * quarter turn) */
+            break;
+        default: {                                   /* SH_BITE */
+            int32_t e = a + ((a - v->sh_z) >> 1);
+            v->sh_z = a;
+            y = dist_sample(sat16(e + 4096), 256 + ((v->drive * 1536) >> 16));   /* (the bias: odd and even) */
+            v->sh_dc += (y - v->sh_dc) >> 8;
+            y = sat16(y - v->sh_dc);
+            break;
+        }
+        }
+        buf[i] = (int16_t)y;
+    }
+}
+
+static void drum_block(voice_t *v, int16_t *buf)     /* calcDrumVoiceSyncBlock */
+{
+    int16_t mb[BLOCK];
+    uint32_t i, vi = (uint32_t)(v - vc);
+    int32_t g, step;
+    if (vi <= V_DRUM3 && mdl[vi].type >= MD_PL0) {   /* 0.15: a Plaits engine (plaits.c): its own sound */
+        pl_block(vi, v, buf);
+        svf_block(&v->flt, v->ftype, buf);
+        goto shape;
+    }
+    if (vi <= V_DRUM3 && mdl[vi].type) {             /* 0.9: a model (rings.c), excited by the voice's own sound */
+        if (mdl[vi].exc) {                           /* (EXCITER: the oscillators, transient and amp EG) */
+            osc_block(&v->mod, mb, v->fm1, 0, 0, v->pwm);
+            if (v->mix_oscs) {
+                osc_block(&v->osc, buf, 32768 - v->fm1, 0, 0, v->pwm);
+                add_sat(buf, mb);
+            } else {
+                osc_block(&v->osc, buf, 32768, mb, v->fm2, v->pwm);
+            }
+            trans_block(&v->tr, mb);
+            add_sat(buf, mb);
+            g = v->last_gain;
+            step = (v->gain - v->last_gain) / (BLOCK - 1);
+            for (i = 0; i < BLOCK; i++, g += step)
+                buf[i] = (int16_t)(((int64_t)buf[i] * g) >> 24);
+            if (v->vol_mod)
+                for (i = 0; i < BLOCK; i++)
+                    buf[i] = (int16_t)((buf[i] * v->velo) >> 15);
+        } else {
+            memset(buf, 0, BLOCK * sizeof buf[0]);
+        }
+        model_block(vi, v, buf);
+        svf_block(&v->flt, v->ftype, buf);
+        goto shape;
+    }
+    if (mi[vi].type) {                               /* 24: MICRO (micro.c): its sound for the oscillators and transient */
+        mi_block(vi, v, buf);
+    } else if (eno[vi].on) {                          /* 0.25: ENSEMBLE (ensemble.c): the same, through the amp EG */
+        en_block(vi, v, buf);
+    } else if (nzo[vi].on) {                          /* 1.0: NOISE (noise.c): the same */
+        nz_block(vi, v, buf);
+    } else {
+        osc_block(&v->mod, mb, v->fm1, 0, 0, v->pwm);
+        if (v->mix_oscs) {
+            osc_block(&v->osc, buf, 32768 - v->fm1, 0, 0, v->pwm);
+            add_sat(buf, mb);
+        } else {
+            osc_block(&v->osc, buf, 32768, mb, v->fm2, v->pwm);
+        }
+        trans_block(&v->tr, mb);
+        add_sat(buf, mb);
+    }
+    svf_block(&v->flt, v->ftype, buf);
+    /* the amp EG, from last block's gain to this one's (bufferTool_addGainInterpolated; 24: not on MICRO, its LENGTH
+     * shapes it) */
+    g = v->last_gain;
+    step = (v->gain - v->last_gain) / (BLOCK - 1);
+    if (!mi[vi].type)
+        for (i = 0; i < BLOCK; i++, g += step)
+            buf[i] = (int16_t)(((int64_t)buf[i] * g) >> 24);
+    if (v->vol_mod)
+        for (i = 0; i < BLOCK; i++)
+            buf[i] = (int16_t)((buf[i] * v->velo) >> 15);
+shape:
+    if (v->shape == SH_LXR) {
+        for (i = 0; i < BLOCK; i++) {                /* calcDistBlockFiltered: the shape smoothed (0.01 a sample) */
+            v->dks += ((v->dk << 8) - v->dks) / 100;
+            buf[i] = (int16_t)dist_sample(buf[i], v->dks >> 8);
+        }
+    } else {
+        shape_block(v, buf);
+    }
+    for (i = 0; i < BLOCK; i++) {                    /* the mixer volume, smoothed (MixerPageFilter, 0.01) */
+        v->vol_s += ((v->vol << 9) - v->vol_s) / 100;
+        buf[i] = (int16_t)((buf[i] * (v->vol_s >> 9)) >> 15);
+    }
+}
+
+/* 24: SN, CY, HH on MICRO: its sound for the voice's own, then the filter, the volume (and velocity: VOL MOD; not the
+ * amp EG: MICRO's LENGTH shapes it) and the shape */
+static void micro_block(voice_t *v, int16_t *buf)
+{
+    uint32_t i;
+    int32_t c = v->vol_mod ? (v->vol * v->velo) >> 15 : v->vol;
+    mi_block((uint32_t)(v - vc), v, buf);
+    svf_block(&v->flt, v->ftype, buf);
+    for (i = 0; i < BLOCK; i++)
+        buf[i] = (int16_t)sat16((int32_t)(((int64_t)buf[i] * c) >> 15));
+    if (v->shape == SH_LXR)
+        dist_block(buf, v->dk);
+    else
+        shape_block(v, buf);
+}
+
+/* 0.25: SN, CY, HH on ENSEMBLE (1.0: or NOISE): its sound for the voice's own, then the filter, the amp EG with the
+ * volume (and velocity: VOL MOD) and the shape */
+static void ensemble_block(voice_t *v, int16_t *buf)
+{
+    uint32_t i, vi = (uint32_t)(v - vc);
+    int32_t c;
+    if (nzo[vi].on)
+        nz_block(vi, v, buf);
+    else
+        en_block(vi, v, buf);
+    svf_block(&v->flt, v->ftype, buf);
+    c = combined_q15(v);
+    for (i = 0; i < BLOCK; i++)
+        buf[i] = (int16_t)sat16((int32_t)(((int64_t)buf[i] * c) >> 15));
+    if (v->shape == SH_LXR)
+        dist_block(buf, v->dk);
+    else
+        shape_block(v, buf);
+}
+
+static void snare_block(voice_t *v, int16_t *buf)    /* Snare_calcSyncBlock */
+{
+    int16_t ob[BLOCK], tb[BLOCK];
+    uint32_t i;
+    int32_t c;
+    osc_block(&v->mod, buf, 29491, 0, 0, 0);         /* the noise, x 0.9 */
+    svf_block(&v->flt, v->ftype, buf);
+    osc_block(&v->osc, ob, 32768 - v->mix, 0, 0, v->pwm);
+    trans_block(&v->tr, tb);
+    c = combined_q15(v);
+    for (i = 0; i < BLOCK; i++) {
+        int32_t t = ((buf[i] * v->mix) >> 15) + ob[i] + tb[i];
+        buf[i] = (int16_t)sat16((int32_t)(((int64_t)t * c) >> 15));
+    }
+    if (v->shape == SH_LXR)
+        dist_block(buf, v->dk);
+    else
+        shape_block(v, buf);
+}
+
+static void metal_block(voice_t *v, int16_t *buf, int32_t gain)   /* Cymbal / HiHat_calcSyncBlock */
+{
+    int16_t m1[BLOCK], m2[BLOCK];
+    uint32_t i;
+    int32_t c;
+    osc_block(&v->mod, m1, v->fm1, 0, 0, v->pwm);
+    osc_block(&v->mod2, m2, v->fm2, 0, 0, v->pwm);
+    add_sat(m1, m2);
+    osc_block(&v->osc, buf, gain, m1, -1, v->pwm);   /* fmMod 1: the modulator's sample as it is */
+    svf_block(&v->flt, v->ftype, buf);
+    trans_block(&v->tr, m1);
+    c = combined_q15(v);
+    for (i = 0; i < BLOCK; i++)
+        buf[i] = (int16_t)sat16((int32_t)(((int64_t)sat16(buf[i] + m1[i]) * c) >> 15));
+    if (v->shape == SH_LXR)
+        dist_block(buf, v->dk);
+    else
+        shape_block(v, buf);
+}
+
+static void decimate(voice_t *v, int16_t *buf, uint32_t rate)     /* mixer_decimateBlock */
+{
+    uint32_t i;
+    if (rate >= 65536u && v->dec_cnt == 0) {
+        v->dec_hold = buf[BLOCK - 1];
+        return;
+    }
+    for (i = 0; i < BLOCK; i++) {
+        v->dec_cnt += rate;
+        if (v->dec_cnt >= 65536u) {
+            v->dec_cnt -= 65536u;
+            v->dec_hold = buf[i];
+        }
+        buf[i] = v->dec_hold;
+    }
+}
+
+/* after the sample rate reducer: the bit reducer (rounded to the kept bits) and the tilt EQ (a one-pole split at
+ * ~700 Hz; TILT 64 flat, 127: the lows x0.25 and the highs x1.75, 0 the other way) */
+static void post_block(voice_t *v, int16_t *buf)
+{
+    uint32_t i;
+    if (v->bits) {
+        int32_t half = 1 << (v->bits - 1u), mask = ~((1 << v->bits) - 1);
+        for (i = 0; i < BLOCK; i++)
+            buf[i] = (int16_t)sat16((buf[i] + half) & mask);
+    }
+    if (v->tilt != 64u) {
+        int32_t a = ((int32_t)v->tilt - 64) * 24576 / 63, gl = 32768 - a, gh = 32768 + a;
+        for (i = 0; i < BLOCK; i++) {
+            int32_t x = buf[i], h;
+            v->tilt_lp += ((x - v->tilt_lp) * 3112) >> 15;
+            h = x - v->tilt_lp;
+            buf[i] = (int16_t)sat16((v->tilt_lp * gl + h * gh) >> 15);
+        }
+    }
+}
+
+/* ----------------------------------------------------------- insert --- */
+/* 27a: one INSERT per track, after the shaper, the bits and the tilt, before the pan and the sends (mono). AMOUNT (a)
+ * is how much of it is heard, 0 none, whatever the type; b and c are the type's (params.c names them). A new type
+ * starts from rest. 1.0 (after Phase 10e, the user: they didn't sound great and cost CPU): PHASER, FLANGER, CHORUS,
+ * TREMOLO and AUTOPAN dropped; their numbers stay (kits store them) and play as OFF (ins_live; kit.c sanitizes) */
+enum { INS_OFF, INS_PHASER, INS_FLANGER, INS_CHORUS, INS_TREMOLO, INS_AUTOPAN, INS_SHIFT, INS_RING, NINS };
+static inline uint32_t ins_live(uint32_t t) { return t == INS_SHIFT || t == INS_RING ? t : INS_OFF; }
+static const uint8_t INS_LIVE[3] = {INS_OFF, INS_SHIFT, INS_RING};   /* (an LFO picks among these) */
+typedef struct {
+    uint8_t type, a, b, c;       /* (sound.c: PAR_INS1 ..) */
+    uint8_t was;                 /* the type its state is for */
+    uint32_t osc;                /* RING's and SHIFTER's oscillator (a sample) */
+    int32_t st[33];              /* SHIFTER: 8 sections' x1 x2 y1 y2, then the delay */
+    int32_t fb;                  /* the last output, fed back */
+} ins_t;
+static ins_t ins[NVOICE] RAMBUF;                    /* (RAMTEXT's: the pool is short) */
+/* SHIFTER: two chains of four allpasses 90 degrees apart (Olli Niemitalo's, a^2 in Q30); the first's output a sample
+ * late */
+static const int32_t HILB[8] = {514752760, 940832443, 1048613677, 1071056671,
+                                173686865, 787083823, 1015061512, 1063647745};
+
+static void ins_block(uint32_t vi, int16_t *buf)
+{
+    ins_t *s = &ins[vi];
+    uint32_t i, t = ins_live(s->type);
+    int32_t amt = s->a * 258;                        /* Q15 */
+    if (t != s->was) {                               /* (a new type: from rest) */
+        memset(s->st, 0, sizeof s->st);
+        s->fb = 0;
+        s->was = (uint8_t)t;
+    }
+    if (t == INS_OFF)
+        return;
+    switch (t) {
+    case INS_SHIFT: {                                /* +-500 Hz (b 64: none), fed back + or - (c 64: none; at most
+                                                      * 0.64: near DC the pair is less than 90 degrees apart) */
+        int32_t d = (int32_t)s->b - 64, hz = d * d * 500 / (63 * 63), fbk = clamp32(((int32_t)s->c - 64) * 335, -21000, 21000);
+        int32_t inc = (int32_t)(((int64_t)(d < 0 ? -hz : hz) << 32) / FS);
+        for (i = 0; i < BLOCK; i++) {                /* (8 bits below the sample's, rounded: no limit cycle) */
+            int32_t x = buf[i], a = (x << 8) + (int32_t)(((int64_t)s->fb * fbk) >> 15), b, k, y;
+            a = b = clamp32(a, -(1 << 23), 1 << 23);
+            for (k = 0; k < 4; k++) {                /* (y = a^2 (x + y2) - x2) */
+                int32_t *z = &s->st[k * 4];
+                y = (int32_t)(((int64_t)HILB[k] * (a + z[3]) + (1 << 29)) >> 30) - z[1];
+                z[1] = z[0]; z[0] = a; z[3] = z[2]; z[2] = y;
+                a = y;
+            }
+            for (k = 4; k < 8; k++) {
+                int32_t *z = &s->st[k * 4];
+                y = (int32_t)(((int64_t)HILB[k] * (b + z[3]) + (1 << 29)) >> 30) - z[1];
+                z[1] = z[0]; z[0] = b; z[3] = z[2]; z[2] = y;
+                b = y;
+            }
+            y = (int32_t)(((int64_t)s->st[32] * sine_at(s->osc + 0x40000000u) + (int64_t)b * sine_at(s->osc) +
+                           16384) >> 15);
+            s->st[32] = a;
+            s->osc += (uint32_t)inc;
+            s->fb = y = clamp32(y, -(1 << 23), 1 << 23);
+            y = (y + 128) >> 8;
+            buf[i] = (int16_t)sat16(x + (((y - x) * amt) >> 15));
+        }
+        break;
+    }
+    default: {                                       /* RING: against a sine of 20 Hz .. 2.6 kHz; c 127: AM */
+        uint32_t inc = (uint32_t)(((uint64_t)20u * (uint32_t)exp2_q16((int32_t)(s->b * 7u * 65536u / 127u)) << 16) / FS);
+        int32_t c = s->c * 258;
+        for (i = 0; i < BLOCK; i++) {
+            int32_t x = buf[i], w = sine_at(s->osc), mm = w + ((((32767 + w) >> 1) - w) * c >> 15);
+            int32_t y = (x * mm) >> 15;
+            s->osc += inc;
+            buf[i] = (int16_t)sat16(x + (((y - x) * amt) >> 15));
+        }
+        break;
+    }
+    }
+}
+
+/* ------------------------------------------------------------ mixer --- */
+enum { R_ST1, R_ST2, R_L1, R_R1, R_L2, R_R2, R_FX };
+static int32_t mix_l[BLOCK], mix_r[BLOCK];          /* the outputs (both stereo pairs and the mono outs) */
+/* 0.6: PERFORM 2 (perform.c). PUMP: every voice but D1 through a gain from pump_g0 to pump_g1 over the block (Q15);
+ * SPACE: the dry mix dipped before the FX bus and reverb join it (and the reverb held: reverb.c) */
+static int32_t pump_g0 = 32768, pump_g1 = 32768;
+static int32_t pump_m0 = 32768, pump_m1 = 32768;    /* (1.0 Phase 10f: PUMP's as it was for the block being mixed) */
+static uint8_t space_on;
+static int16_t fx_l[BLOCK], fx_r[BLOCK];            /* the FX bus (the LXR's saturating int16 sums) */
+static int16_t dly_l[BLOCK] POOL, dly_r[BLOCK] POOL;   /* 1.0 Phase 16: the delay's own sends (fxbus.c fxbus_process) */
+static uint8_t dly_fed;                             /* .. a voice sent to it this block */
+/* the reverb's send (mono), a pair (1.0 Phase 10f): the mixer fills rev_in while the reverb (either core) reads the
+ * other, the last block's (voices_turn swaps them) */
+static int32_t rev_ib[2][BLOCK];
+static int32_t *rev_in = rev_ib[0];
+static uint32_t rev_fed, rev_fed_r;                 /* a send fed it this block (the mixer's; the reverb's) */
+/* what the mixer reads of each voice, as it was when the block being mixed was rendered (voices_turn): a hit's
+ * random pan, a lock's send or a choke from the next block's hits leaves the last block's sound alone */
+typedef struct {
+    int32_t fx_send, rev_send, dly_send, xamt, venv;
+    int16_t pan_l, pan_r;
+    uint8_t route, out_fx, throw_fx, throw_rev, xsrc, xmode, choking;
+} mixs_t;
+static mixs_t mxs[NVOICE];
+static uint32_t rev_g_mx = 65536u;                  /* (rev_g, mc_key, space_on, PUMP's, as they were then) */
+static uint8_t mc_key_mx, space_mx;
+static uint32_t voice_active;                       /* bit v: the voice sounded this block (the UI's meters) */
+/* 0.16: the master compressor's SIDECHAIN voice (1..6, 0 none: fxbus.c mcomp): its dry part goes here, not into the
+ * mix, so the compressor's gain leaves it alone (comp_master adds it back) */
+static uint8_t mc_key;
+static int32_t mc_kl[BLOCK], mc_kr[BLOCK];
+static int32_t voice_peak[NVOICE];
+/* 1.0 (Phase 8): the USB audio's stems (usb.c FELUCCA_UAC_CH 8: uac_block; a host test's stand-in). Each voice's
+ * block as the mixer takes it (after its insert, cross modulation, choke and PUMP; before the pan, the sends, the
+ * bus, the reverb and the master) on USB channel 3 + v; the stereo mix on 1-2 (engine.c). mix_out (CONFIG: USB MIX,
+ * kset.mixout): bit v, voice v left out of the stereo mix, its dry sound and its sends alike, while a computer
+ * records (uac_block not NULL); its stem plays on. Without a recording every voice is in the mix */
+#ifndef UAC_STEMS
+#define UAC_STEMS 0
+#endif
+static uint8_t mix_out;
+#if UAC_STEMS
+static uint32_t stems_live(void) { return uac_recording() != 0; }   /* (CONFIG: USB MIX's line) */
+#else
+static uint32_t stems_live(void) { return 0; }
+#endif
+
+static void mix_voice(const mixs_t *v, const int16_t *buf, int32_t *dl, int32_t *dr)   /* mixer_addDataToOutput, with
+                                                      * the sends; the dry part into dl, dr */
+{
+    uint32_t i;
+    int32_t s = v->out_fx || v->throw_fx ? 32768 : v->fx_send >= 32767 ? 32768 : v->fx_send;
+    const int32_t pl = v->pan_l, pr = v->pan_r;      /* the pan's gains, Q14 (1.0: AUTOPAN gone, no longer a sample) */
+    int32_t rs = v->throw_rev ? 32767 : rev_g_mx == 65536u ? v->rev_send : clamp32((int32_t)(((int64_t)v->rev_send * rev_g_mx) >> 16), 0, 32767);
+    int16_t dry[BLOCK];
+    if (v->dly_send) {                               /* 1.0 Phase 16: the delay send, panned as the FX send */
+        const int32_t ds = v->dly_send;
+        for (i = 0; i < BLOCK; i++) {
+            int32_t x = (buf[i] * ds) >> 15;
+            dly_l[i] = (int16_t)sat16(dly_l[i] + ((x * pl) >> 14));
+            dly_r[i] = (int16_t)sat16(dly_r[i] + ((x * pr) >> 14));
+        }
+        dly_fed = 1;
+    }
+    if (rs) {
+        int32_t any = 0;
+        for (i = 0; i < BLOCK; i++) {
+            rev_in[i] += (buf[i] * rs) >> 15;
+            any |= buf[i];
+        }
+        rev_fed |= any != 0;                         /* (a silent voice lets the reverb sleep) */
+    }
+    if (s) {                                         /* the FX send: its share through the bus (panned, as the LXR's) */
+        for (i = 0; i < BLOCK; i++) {
+            int32_t x = s == 32768 ? buf[i] : (buf[i] * s) >> 15;
+            fx_l[i] = (int16_t)sat16(fx_l[i] + ((x * pl) >> 14));
+            fx_r[i] = (int16_t)sat16(fx_r[i] + ((x * pr) >> 14));
+        }
+        if (s == 32768)
+            return;
+        for (i = 0; i < BLOCK; i++)                  /* the rest to the output */
+            dry[i] = (int16_t)(buf[i] - ((buf[i] * s) >> 15));
+        buf = dry;
+    }
+    switch (v->route) {
+    case R_L1:
+    case R_L2:
+        for (i = 0; i < BLOCK; i++)
+            dl[i] += buf[i];
+        break;
+    case R_R1:
+    case R_R2:
+        for (i = 0; i < BLOCK; i++)
+            dr[i] += buf[i];
+        break;
+    default:
+        for (i = 0; i < BLOCK; i++) {
+            dl[i] += (buf[i] * pl) >> 14;
+            dr[i] += (buf[i] * pr) >> 14;
+        }
+        break;
+    }
+}
+
+static void fxbus_process(void);                    /* (fxbus.c) */
+static void fxbus_early(void);
+static void reverb_add(void);
+static void reverb_bus(void);
+static void modnodes_block(void);                   /* (sound.c) */
+
+/* one block of the six voices into mix_l / mix_r (Q15, unsaturated) */
+static void voice_filter_mods(void);                /* (sound.c) */
+/* the voices' blocks, a pair (1.0 Phase 10f): the voices render into vb_out while the mixer takes vbuf, the block
+ * rendered last time (voices_turn swaps them). Cross modulation and the master compressor's key read vbuf */
+static int16_t vbuf_b[2][NVOICE][BLOCK];
+static int16_t (*vbuf)[BLOCK] = vbuf_b[0], (*vb_out)[BLOCK] = vbuf_b[1];
+
+/* cross modulation: voice vi's block from its source's (rendered this block, as it was before its own cross
+ * modulation): DUCK turns it down by the source's envelope, RING multiplies the two (x2) and blends that in */
+static void xmod_block(uint32_t vi, int16_t *out)
+{
+    const mixs_t *v = &mxs[vi];
+    uint32_t i, s = v->xsrc - 1u;
+    if (v->xmode == XM_DUCK) {
+        int32_t g = 32768 - (int32_t)(((int64_t)v->xamt * mxs[s].venv) >> 15);
+        for (i = 0; i < BLOCK; i++)
+            out[i] = (int16_t)((out[i] * g) >> 15);
+    } else if (v->xmode == XM_RING) {
+        for (i = 0; i < BLOCK; i++) {
+            int32_t r = sat16((out[i] * vbuf[s][i]) >> 14);
+            out[i] = (int16_t)sat16(out[i] + (((r - out[i]) * v->xamt) >> 15));
+        }
+    }
+}
+
+/* voices lo .. hi - 1 into vbuf, with their decimation, bits, tilt and output envelope. 0.15 (17c): D1-D3 are the
+ * second core's job (c1_drums) while core 0 renders SN, CY and HH: a voice's render touches only its own state (each
+ * oscillator and model has its own noise, dsp.c), so the sound is the same on either core, in either order */
+static void voices_render(uint32_t lo, uint32_t hi)
+{
+    uint32_t i, vi;
+    for (vi = lo; vi < hi; vi++) {
+        voice_t *v = &vc[vi];
+        int16_t *b = vb_out[vi];
+        int32_t pk = 0;
+        if (vi <= V_DRUM3)
+            drum_block(v, b);
+        else if (mi[vi].type)
+            micro_block(v, b);
+        else if (eno[vi].on || nzo[vi].on)
+            ensemble_block(v, b);
+        else if (vi == V_SNARE)
+            snare_block(v, b);
+        else
+            metal_block(v, b, vi == V_CYM ? 32768 : 16384);
+#ifdef VOICE_CAPTURE
+        VOICE_CAPTURE(vi, b);                        /* (host tests: the voice before the mixer) */
+#endif
+        decimate(v, b, (uint32_t)(((uint64_t)decim_rate[vi] * decim_rate[NVOICE]) >> 16));
+        post_block(v, b);
+        ins_block(vi, b);                            /* (27a) */
+        for (i = 0; i < BLOCK; i += 2) {
+            int32_t a = iabs(b[i]);
+            if (a > pk)
+                pk = a;
+        }
+        if (v->choking == 2u)
+            pk = 0;
+        vpk[vi] = pk;
+        venv[vi] = pk > venv[vi] ? pk : venv[vi] - (venv[vi] >> 5);   /* (release ~45 ms) */
+    }
+}
+/* 1.0 Phase 10f: the voices a block ahead of the mixer. Each block core 1 renders D1-D3 (into vb_out) while core 0
+ * renders SN-HH beside it and then mixes the block both rendered last time (vbuf): the mixer, the FX bus and the
+ * master no longer wait for D1-D3, so the block's length is the longer core's, not core 1's plus the mixer's. The
+ * output is one block (1.45 ms) later. Core 1 is waited for at the block's end (voices_end, engine.c), before the
+ * next block's voices change anything it reads. The reverb (on the mixer's last send, rev_ib, into the return the
+ * mixer takes next block: reverb.c) runs on either core: rev_c1 */
+#if FELUCCA_CPU2
+static uint32_t c1_ticks, c1_vt;                     /* the second core's last job, and its voices alone, TIMER4 (written
+                                                      * there, read after the wait) */
+static uint32_t rv_t, c0_t0;                         /* the reverb's last time (either core); core 0's start this block */
+static uint8_t c1_go;                                /* this block: core 1 took a job (bit 0), the reverb in it (bit 1) */
+/* the reverb goes to the core whose other work was the lighter last block: on core 0 the block is max(c0 + R, c1),
+ * on core 1 max(c0, c1 + R) (R the reverb's time). The shorter, with 1/8 hysteresis */
+static uint8_t rev_c1 = 1;                           /* (this block: on core 1) */
+static void reverb_job(void);
+static void c1_drums(uint32_t arg)                   /* (runs on the second core; arg: the reverb too) */
+{
+    uint32_t t0 = fm1_ticks();
+    voices_render(V_DRUM1, V_SNARE);
+    c1_vt = fm1_ticks() - t0;
+    if (arg)
+        reverb_job();
+    c1_ticks = fm1_ticks() - t0;
+}
+#endif
+#ifdef VOICES_SWAP
+static uint8_t voices_swap;                          /* (host tests: SN-HH first, as two cores may finish them) */
+#endif
+#ifdef FX_NOW
+static uint8_t fx_now;                               /* (host tests: the reverb on this block's send, as before 18b) */
+#endif
+static void reverb_job(void);                        /* (reverb.c) */
+static void reverb_turn(void);
+#ifdef FX_NOW
+static void reverb_now(void);
+#endif
+
+/* the block's start (core 1 idle): what was rendered goes to the mixer, with each voice's envelope and choke as they
+ * were after it (a choked voice fades over that block, then is silent: its next render sees 2). The sends start again
+ * in the pair's other half; the reverb reads the half the mixer filled last */
+static uint8_t vb_turned;                            /* (voices_end turned it: the next voices_block doesn't) */
+static void voices_turn(void)
+{
+    uint32_t i, vi;
+    int16_t (*t)[BLOCK] = vbuf;
+    vbuf = vb_out;
+    vb_out = t;
+    for (vi = 0; vi < NVOICE; vi++) {
+        voice_t *v = &vc[vi];
+        mixs_t *m = &mxs[vi];
+        m->fx_send = v->fx_send;
+        m->rev_send = v->rev_send;
+        m->dly_send = v->dly_send;
+        m->xamt = v->xamt;
+        m->venv = venv[vi];
+        m->pan_l = v->pan_l;
+        m->pan_r = v->pan_r;
+        m->route = v->route;
+        m->out_fx = v->out_fx;
+        m->throw_fx = v->throw_fx;
+        m->throw_rev = v->throw_rev;
+        m->xsrc = v->xsrc;
+        m->xmode = v->xmode;
+        m->choking = v->choking;
+        if (v->choking == 1u)
+            v->choking = 2;
+    }
+    rev_g_mx = rev_g;
+    mc_key_mx = mc_key;
+    space_mx = space_on;
+    pump_m0 = pump_g0;
+    pump_m1 = pump_g1;
+    rev_in = rev_ib[rev_in == rev_ib[0]];
+    rev_fed_r = rev_fed;
+    rev_fed = 0;
+    for (i = 0; i < BLOCK; i++) {
+        fx_l[i] = fx_r[i] = 0;
+        rev_in[i] = 0;
+    }
+    if (dly_fed) {                                   /* (1.0 Phase 16: cleared only after a send: none, none to do) */
+        memset(dly_l, 0, sizeof dly_l);
+        memset(dly_r, 0, sizeof dly_r);
+        dly_fed = 0;
+    }
+    reverb_turn();
+}
+
+/* the mixer's work for voice vi (the block being mixed): cross modulation, choke, PUMP, its peak, its USB stem (ub:
+ * the USB audio's block or 0), then mix_voice */
+static void mix_one(uint32_t vi, int16_t *ub)
+{
+    int16_t buf[BLOCK];
+    uint32_t i;
+    const mixs_t *v = &mxs[vi];
+    const int16_t *b = vbuf[vi];
+    int32_t pk = 0;
+    uint32_t ch = v->choking;
+    (void)ub;
+    if ((v->xsrc && v->xsrc != vi + 1u && v->xamt && v->xmode != XM_FILTER) || ch) {
+        memcpy(buf, b, sizeof buf);
+        if (v->xsrc && v->xsrc != vi + 1u && v->xamt && v->xmode != XM_FILTER)
+            xmod_block(vi, buf);
+        if (ch == 1u) {                              /* choked: out over this block, then silent */
+            for (i = 0; i < BLOCK; i++)
+                buf[i] = (int16_t)((buf[i] * (int32_t)(BLOCK - 1u - i)) / (int32_t)BLOCK);
+        } else if (ch) {
+            memset(buf, 0, sizeof buf);
+        }
+        b = buf;
+    }
+    if (vi != V_DRUM1 && (pump_m0 < 32768 || pump_m1 < 32768)) {
+        int32_t g = pump_m0 << 6, dg = pump_m1 - pump_m0;   /* (Q21 ramp: 64 samples) */
+        if (b != buf)
+            memcpy(buf, b, sizeof buf);
+        for (i = 0; i < BLOCK; i++, g += dg)
+            buf[i] = (int16_t)((buf[i] * (g >> 6)) >> 15);
+        b = buf;
+    }
+    for (i = 0; i < BLOCK; i += 4) {
+        int32_t a = iabs(b[i]);
+        if (a > pk)
+            pk = a;
+    }
+    voice_peak[vi] = pk;
+    if (pk > 64)
+        voice_active |= 1u << vi;
+#if UAC_STEMS
+    if (ub) {                                        /* its stem; OUT of the mix: nothing more */
+        int16_t *st = ub + 2u + vi;
+        for (i = 0; i < BLOCK; i++, st += UAC_NCH)
+            *st = b[i];
+        if ((mix_out >> vi) & 1u)
+            return;
+    }
+#endif
+    mix_voice(v, b, mc_key_mx == vi + 1u ? mc_kl : mix_l, mc_key_mx == vi + 1u ? mc_kr : mix_r);
+}
+
+/* one block: this block's voices rendered (vb_out), last block's mixed into mix_l / mix_r (Q15, unsaturated) */
+static void voices_block(void)
+{
+    uint32_t i, vi;
+    if (!vb_turned)                                  /* (host tests calling this alone) */
+        voices_turn();
+    vb_turned = 0;
+    modnodes_block();                                /* reset the targets, velocity and LFO modulation */
+    voice_filter_mods();                             /* random per hit, cross modulation's FILTER */
+    for (vi = 0; vi < NVOICE; vi++) {
+        voice_async(vi);
+    }
+    model_limit();                                   /* (model_cap may have changed: main.c) */
+    for (i = 0; i < BLOCK; i++)
+        mix_l[i] = mix_r[i] = mc_kl[i] = mc_kr[i] = 0;
+    voice_active = 0;
+    DG_MARK(DG_PRE);
+    LOAD_MARK(LD_SEQ);
+#if UAC_STEMS
+    int16_t *ub = uac_block();                       /* (NULL: nobody records) */
+#else
+    int16_t *ub = 0;
+#endif
+#if FELUCCA_CPU2
+    uint32_t rc1 = rev_c1;
+#ifdef FX_NOW
+    rc1 = rc1 && !fx_now;
+#endif
+    c0_t0 = fm1_ticks();
+    if (fm1_cpu1_run(c1_drums, rc1)) {               /* D1-D3 (and the reverb, rev_c1) on the second core */
+        c1_go = (uint8_t)(1u | rc1 << 1);
+        voices_render(V_SNARE, NVOICE);
+        LOAD_MARK(LD_SNHH);
+        if (!rc1) {
+            uint32_t t = fm1_ticks();
+            reverb_job();
+            LOAD_MARK(LD_REV);
+            rv_t = fm1_ticks() - t;
+        }
+    } else
+#endif
+    {
+#ifdef VOICES_SWAP
+        if (voices_swap) {
+            voices_render(V_SNARE, NVOICE);
+            voices_render(V_DRUM1, V_SNARE);
+        } else
+#endif
+        {
+            voices_render(V_DRUM1, V_SNARE);
+            LOAD_MARK(LD_D13);
+            voices_render(V_SNARE, NVOICE);
+            LOAD_MARK(LD_SNHH);
+        }
+#ifdef FX_NOW
+        if (!fx_now)
+#endif
+            reverb_job();
+        LOAD_MARK(LD_REV);
+    }
+    fxbus_early();                                   /* (the delay's reads: needs no voice) */
+    LOAD_MARK(LD_FX);
+    for (vi = 0; vi < NVOICE; vi++)                  /* cross modulation, choke, the mixer */
+        mix_one(vi, ub);
+    if (space_mx)                                    /* SPACE: the dry sound dipped to 0.4 */
+        for (i = 0; i < BLOCK; i++) {
+            mix_l[i] = (mix_l[i] * 13107) >> 15;
+            mix_r[i] = (mix_r[i] * 13107) >> 15;
+            mc_kl[i] = (mc_kl[i] * 13107) >> 15;
+            mc_kr[i] = (mc_kr[i] * 13107) >> 15;
+        }
+    LOAD_MARK(LD_MIX);
+    reverb_bus();                                    /* (1.0 Phase 16: REV > FX's share into the bus's input) */
+    fxbus_process();
+    LOAD_MARK(LD_FX);
+#ifdef FX_NOW
+    if (fx_now)
+        reverb_now();                                /* (this block's send into the return added now) */
+#endif
+    reverb_add();
+    LOAD_MARK(LD_REV);
+}
+
+/* the block's end (engine.c, after the master): core 1 waited for, so the next block's voices may change what it
+ * reads; the reverb's core for the next block */
+static void voices_end(void)
+{
+#if FELUCCA_CPU2
+    if (c1_go) {
+        uint32_t c0 = fm1_ticks() - c0_t0 - (c1_go & 2u ? 0u : rv_t);   /* (core 0's own work beside core 1, the
+                                                                         * reverb not counted) */
+        if (fm1_cpu1_wait() == 0) {
+            LOAD_MARK(LD_WAIT);
+            ld_acc[LD_D13] += c1_ticks;
+            if (c1_go & 2u)
+                rv_t = c1_ticks - c1_vt;
+            {
+                uint32_t a = c0 + rv_t, on0 = a > c1_vt ? a : c1_vt;
+                uint32_t b = c1_vt + rv_t, on1 = b > c0 ? b : c0;
+                if (rev_c1 ? on0 + (on1 >> 3) < on1 : on1 + (on0 >> 3) < on0)
+                    rev_c1 ^= 1u;
+            }
+        } else {                                     /* it misread or didn't answer: held from now on, D1-D3 here */
+            LOAD_MARK(LD_WAIT);
+            voices_render(V_DRUM1, V_SNARE);
+            if (c1_go & 2u)
+                reverb_job();
+            LOAD_MARK(LD_D13);
+        }
+        c1_go = 0;
+    }
+#endif
+    voices_turn();                                   /* (before the next block's hits) */
+    vb_turned = 1;
+}
+
+static void voices_init(void)                       /* initDrumVoice, Snare_init, Cymbal_init, HiHat_init */
+{
+    uint32_t i;
+    memset(vbuf_b, 0, sizeof vbuf_b);                /* (Phase 10f: nothing rendered yet to mix) */
+    memset(mxs, 0, sizeof mxs);
+    vb_turned = 0;
+    memset(rev_ib, 0, sizeof rev_ib);
+    rev_fed = rev_fed_r = 0;
+    pump_m0 = pump_m1 = 32768;
+    for (i = 0; i < NVOICE; i++) {
+        voice_t *v = &vc[i];
+        v->vol = 26214;                              /* 0.8 */
+        v->osc.midi_freq = v->mod.midi_freq = v->mod2.midi_freq = 70u << 8 | 64u;
+        v->osc.base_note = v->mod.base_note = v->mod2.base_note = SEQ_DEFAULT_NOTE;
+        v->osc.wave = (uint8_t)(i <= V_DRUM3 ? W_TRI + i : W_TRI);
+        v->mod.wave = (uint8_t)(i >= V_CYM ? W_SINE : W_TRI);
+        v->mod2.wave = W_NOISE;
+        v->osc.rng = 0x9E3779B9u + 0x01000193u * (3u * i);   /* (each its own, never 0) */
+        v->mod.rng = 0x9E3779B9u + 0x01000193u * (3u * i + 1u);
+        v->mod2.rng = 0x9E3779B9u + 0x01000193u * (3u * i + 2u);
+        mi[i].rng = 0x2545F491u + 0x01000193u * (i + 1u);   /* (24: MICRO's noise) */
+        if (i == V_SNARE)
+            v->mod.wave = W_NOISE;                   /* the snare's noise (Snare_calcSyncBlock: calcNoiseBlock) */
+        v->fm1 = v->fm2 = 16384;
+        v->peg_amt = 32768;
+        v->tr.inc = 1u << 20;
+        v->tr.vol = 32767;
+        v->pmod = 65536u;
+        v->vol_mod = 1;
+        v->mix_oscs = 1;
+        v->ftype = F_LP;
+        v->aeg.atk = v->aeg.dec = 167772;            /* 0.01 */
+        v->aeg.k = v->aeg.ik = 0;
+        v->peg.dec = 167772;
+        v->dk = dist_k(0);
+        v->dks = v->dk << 8;
+        v->vol_s = v->vol << 9;
+        v->route = R_ST1;
+        v->pan = 63;
+        v->tilt = 64;
+        v->rp = 65536u;
+        v->dec_base = v->aeg.dec;
+        svf_init(&v->flt);
+        v->flt.line = flt_line[i];
+        v->lfo.rate = 65536u;
+        lfo_update_inc(&v->lfo);
+        v->lfo2.rate = 65536u;
+        lfo_update_inc(&v->lfo2);
+        memset(&ins[i], 0, sizeof ins[i]);
+        osc_recalc(&v->osc);
+        osc_recalc(&v->mod);
+        osc_recalc(&v->mod2);
+        voice_pan_latch(v);
+        decim_rate[i] = 65536u;
+    }
+    decim_rate[NVOICE] = 65536u;
+}

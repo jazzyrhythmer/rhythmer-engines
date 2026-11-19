@@ -1,0 +1,50 @@
+{
+  "product": "Rhythmer Engines",
+  "version": "0.1.0",
+  "stage": "private-test-installers",
+  "published": false,
+  "physical_mpc_tested": false,
+  "engines": 20,
+  "kits": 36,
+  "visible_source_views": 26,
+  "sound_selections": 2743,
+  "default": "Rhythmer Kit / K-WASUB / 909",
+  "pages": [
+    "PLAY",
+    "EDIT",
+    "KIT for Rhythmer Kit",
+    "ABOUT"
+  ],
+  "first_release_excluded": [
+    "GEN including Chord GEN",
+    "Acid Engine",
+    "Break Engine"
+  ],
+  "mac": [
+    "Apple Silicon AU",
+    "Apple Silicon VST3",
+    "Apple Silicon VST2 custom editor"
+  ],
+  "mpc": [
+    "ARM32 MPC One / Live II / X target",
+    "ARM64 included"
+  ],
+  "validation": [
+    "native/validation.json",
+    "native/mac-validation.json"
+  ],
+  "sample_os": "Separate project retains GEN, Acid and Break; shares the 36-kit calibration and normal NEW default only.",
+  "synth_sound_selections": 2707,
+  "mpc_pages": [
+    "PLAY",
+    "EDIT",
+    "MOD",
+    "FX",
+    "KIT",
+    "ABOUT"
+  ],
+  "mpc_test_build": 8,
+  "mpc_parameters": 179,
+  "mpc_choice_browser": "16-row in-page list, previous/next/close",
+  "mpc_kit_midi": "Configurable root 0-112, default60; legacy36-51 fallback"
+}

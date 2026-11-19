@@ -1,0 +1,56 @@
+# Build outputs (host renders, firmware images, packages)
+build/
+*.o
+*.elf
+*.dis
+*.fwsc
+a.out
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS and editor files
+.DS_Store
+._*
+__MACOSX/
+.vscode/
+.idea/
+*.swp
+*~
+
+# Project-local tooling: toolchain, SDK, venv, reference audio (make setup installs here)
+.local/
+.jieli/
+.toolchain/
+fw-AC79_AIoT_SDK/
+
+# Secrets, never committed
+.env
+*.pem
+*.key
+
+# Audio and reference recordings: used for analysis only, never redistributed. Commit derived numbers instead.
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.aif
+*.aiff
+
+# Research notes, third-party source copies and reviewer scratch: kept privately since 0.9.5, never committed.
+docs/model/research/
+# Any future download area for reference material
+docs/model/data/reference-audio/
+
+docs/model/reviews/scratch-*/
+
+# Local backups (full pre-rewrite history bundle, sources tarball): kept on disk, never pushed
+.local-backup/
+
+# Claude Code session state (worktrees, locks, settings): never pushed
+.claude/
+
+# the emulator's build output (published to the gh-pages branch)
+web/dist/
+ISSUES.md

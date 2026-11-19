@@ -1,0 +1,14 @@
+{
+  "id": "aphex",
+  "repo": "filliformes/aphex-move",
+  "tag": "v0.1.1",
+  "url": "https://github.com/filliformes/aphex-move/releases/download/v0.1.1/aphex-module.tar.gz",
+  "sha256": "bd966d0a3aac7e04078081910f035fc00bf0e4b35b8c8a4eee2de60629c10d4b",
+  "bytes": 33004,
+  "digest_checked": true,
+  "source_commit": "f568cc1ddb9b35536546a9d27b810ad13b57548e",
+  "dsp_sha256": "a1eececb14e7484f526daf7f98052916732c4ea47676c9a2312b48319f5d0f7e",
+  "name": "Aphex",
+  "parameters": 83,
+  "module_folder": "move-originals/aphex/aphex"
+}

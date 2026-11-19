@@ -1,0 +1,71 @@
+# Pages (ui.c): buttons LFO 5, FX 2, ARP 10, EDIT 6, HOME 8, GLO 7, PLAY 12; encoders SELECT 0, K1 = 2.
+# boot: the PERFORM page (HOME lit); HOME: the main page (still lit). SELECT walks the pages: one detent -> VOICE
+# (EDIT is CHORD since 0.9.3: dark, chord mode off).
+100 expect led 8 1
+150 btn 8
+200 turn 0 1
+300 expect state page VOICE
+300 expect led 6 0
+300 expect led 8 0
+400 shot
+# LFO: the first tap opens the TREM/WAH page (the effect stays off), the second tap turns it on, a third off
+500 btn 5
+600 expect led 5 0
+700 btn 5
+800 expect led 5 1
+900 btn 5
+1000 expect led 5 0
+# on the TREM page K1 is the EFFECT card: OFF -> PAN -> TREM -> WAH (the LFO LED follows)
+1100 turn 2 1
+1200 expect led 5 1
+1300 shot
+# ARP opens ARPEGGIO; K1 there (MODE: OFF -> UP) turns the arpeggiator on (ARP lit)
+1400 btn 10
+1500 turn 2 1
+1600 expect led 10 1
+1700 shot
+# GLO: TEMPO; tap tempo: three taps 400 ms apart -> 150.0 BPM
+1800 btn 7
+1900 expect led 7 1
+2000 btn 12
+2400 btn 12
+2800 btn 12
+3200 shot
+# HOME back to PIANO
+3300 btn 8
+3400 expect led 8 1
+3500 shot
+# FX: all effects off (its LED goes out, BYP on the header) and on again
+3600 btn 2
+3700 expect led 2 0
+3750 shot
+3800 btn 2
+3900 expect led 2 1
+# VIBES (the first bar TYPE): ALGORITHM (encoder 1) four steps from ST77 to VIBES on the main page
+4100 turn 1 1
+4150 turn 1 1
+4200 turn 1 1
+4250 turn 1 1
+4400 shot
+# SELECT twice (PERFORM -> FRODHES -> VOICE): VOICE shows the bar cards (STRIKE, MALLET, TUBE, WEIGHT); SELECT: DECAY (RING, DAMPER, NOISE, TUNE)
+4500 turn 0 1
+4550 turn 0 1
+4600 expect state page VOICE
+4700 shot
+4800 turn 0 1
+4900 shot
+# LFO: TREM/WAH (the effect is PAN); K1 right: TREM, WAH, then MOTOR (bar types only); the LFO LED stays lit
+5000 btn 5
+5100 turn 2 1
+5200 turn 2 1
+5300 turn 2 1
+5400 expect led 5 1
+5500 shot
+# back to STAGE 77: the card says TREM (MOTOR plays as AM on a Rhodes TYPE), still on
+5600 turn 1 -1
+5650 turn 1 -1
+5700 turn 1 -1
+5750 turn 1 -1
+5900 expect led 5 1
+6000 shot
+6100 end

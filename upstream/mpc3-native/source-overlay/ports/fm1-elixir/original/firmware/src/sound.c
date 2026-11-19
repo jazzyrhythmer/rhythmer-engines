@@ -1,0 +1,1029 @@
+/* SPDX-License-Identifier: GPL-3.0-only
+ * Elixir: the sound parameters. par[] is the LXR's activeParameters (the edit buffer: a kit's sound parameters,
+ * then the step and global ones, same numbers as the LXR's ParamEnums, so a kit is the LXR's .SND data); snd_apply
+ * sets the voices from a value as midiParser_ccHandler does (Core/Src/Soundengine/MIDI/MidiParser.c); the
+ * modulation nodes (DSPAudio/modulationNode.c: velocity and LFO, one each per voice) and the sequencer's
+ * automation (automationNode.c) move a parameter away from its value for a while; MORPH crossfades every sound
+ * parameter towards a second kit (Preset/presetManager.c preset_morph). Ported from the LXR firmware,
+ * Copyright (C) 2012-2026 Erica Synths, GPL-3.0-only.
+ *
+ * Threads: the audio ISR owns the voices. The main loop writes par[] and posts the number (snd_post); the ISR
+ * applies what was posted at the start of its next block (snd_service). The sequencer and MIDI input run in the
+ * ISR and apply at once. */
+
+/* Elixir's own sound parameters, after the LXR's numbering (NRPN n - 128 reaches them): each voice's sends to the
+ * FX bus and to the reverb, and the reverb (0.2); each voice's sound shaping (0.3: voices.c). They belong to the kit
+ * as the LXR's sound parameters do: a kit stores them after its END_OF_SOUND_PARAMETERS (KIT_LEN, kit_par), morph
+ * moves them, a step locks them (all but the reverb's model). Six of each per-voice one, in voice order. */
+enum {
+    PAR_FX_SEND1 = NUM_PARAMS,                   /* how much of the voice goes through the FX bus (127: all of it,
+                                                  * as the LXR's Out = FX BUS) */
+    PAR_REV_SEND1 = PAR_FX_SEND1 + 6,            /* the voice into the reverb */
+    PAR_REV_SIZE = PAR_REV_SEND1 + 6,
+    PAR_REV_DAMP,
+    PAR_REV_LEVEL,                               /* the reverb's return */
+    PAR_REV_TYPE,                                /* ROOM SPRING HALL PLATE (not lockable) */
+    PAR_BITS1,                                   /* bit reduction 0 (16 bits) .. 15 (1 bit) */
+    PAR_SHAPE1 = PAR_BITS1 + 6,                  /* the waveshaper: the LXR's, FOLD, CLIP, ASYM, RECTIFY; 23a: FUZZ,
+                                                  * TAPE, SINE FOLD, BITE */
+    PAR_TILT1 = PAR_SHAPE1 + 6,                  /* tilt EQ, 64 flat */
+    PAR_CHOKE1 = PAR_TILT1 + 6,                  /* choke group 0 (none) .. 4 */
+    PAR_RND_PITCH1 = PAR_CHOKE1 + 6,             /* random per hit: pitch, decay, filter, pan */
+    PAR_RND_DECAY1 = PAR_RND_PITCH1 + 6,
+    PAR_RND_FILTER1 = PAR_RND_DECAY1 + 6,
+    PAR_RND_PAN1 = PAR_RND_FILTER1 + 6,
+    PAR_XSRC1 = PAR_RND_PAN1 + 6,                /* cross modulation: the source voice (0 none, 1..6) */
+    PAR_XMODE1 = PAR_XSRC1 + 6,                  /* .. DUCK, FILTER, RING */
+    PAR_XAMT1 = PAR_XMODE1 + 6,                  /* .. its amount */
+    PAR_MODEL1 = PAR_XAMT1 + 6,                  /* 0.6: the DRUM voices' model (rings.c mdl): 0 the LXR's engine; 0.9:
+                                                  * Rings' MODAL STRING FM (0.6 - 0.8: physical models, project.c
+                                                  * proj_models_08; six, as the others: 4..6 unused) */
+    PAR_MDECAY1 = PAR_MODEL1 + 6,                /* .. its DECAY (Rings' DAMPING), BRIGHT, STRUCTURE, POSITION, EXCITER
+                                                  * (the voice's own sound's share), TENSION */
+    PAR_MDAMP1 = PAR_MDECAY1 + 6,
+    PAR_MMAT1 = PAR_MDAMP1 + 6,
+    PAR_MPOS1 = PAR_MMAT1 + 6,
+    PAR_MEXC1 = PAR_MPOS1 + 6,
+    PAR_MTENS1 = PAR_MEXC1 + 6,
+    PAR_LFOMODE1 = PAR_MTENS1 + 6,               /* 0.13: the LFO's mode (voices.c LM_*: TRIG HOLD ONE HALF) */
+    PAR_GATE1 = PAR_LFOMODE1 + 6,                /* 19b: GATE: the amp EG held for the note's length (off: the LXR's) */
+    PAR_DSYNC = PAR_GATE1 + 6,                   /* 21: the delay's SYNC (TIME as note values), SATURATE (TAPE), ECHO >
+                                                  * REVERB, GLITCH (TAPE), PITCH (TAPE: the repeats shifted) */
+    PAR_DSAT,
+    PAR_ECHOREV,
+    PAR_GLITCH,
+    PAR_DPITCH,
+    PAR_FXDIRT,                                  /* 23b: the FX bus's drive, before its type (0: off) */
+    PAR_MDIRT,                                   /* 23c: the master's DIRT: its TYPE (fxbus.c DT_*), AMOUNT (0: off) */
+    PAR_MDIRT_AMT,
+    PAR_MC_RATIO,                                /* 0.16: the master COMPRESSOR (fxbus.c mc): RATIO (0: off), THRESHOLD,
+                                                  * ATTACK, RELEASE, SIDECHAIN (0: the mix, 1..6 a voice), MAKEUP, MIX */
+    PAR_MC_THR,
+    PAR_MC_ATK,
+    PAR_MC_REL,
+    PAR_MC_SRC,
+    PAR_MC_GAIN,
+    PAR_MC_MIX,
+    PAR_L2RATE1,                                 /* 25b: each track's LFO 2 (voices.c vc[].lfo2): RATE, AMOUNT, TARGET
+                                                  * (25a's list, its own voice's), WAVE, MODE, SYNC, RETRIGGER, OFFSET */
+    PAR_L2AMT1 = PAR_L2RATE1 + 6,
+    PAR_L2TGT1 = PAR_L2AMT1 + 6,
+    PAR_L2WAVE1 = PAR_L2TGT1 + 6,
+    PAR_L2MODE1 = PAR_L2WAVE1 + 6,
+    PAR_L2SYNC1 = PAR_L2MODE1 + 6,
+    PAR_L2RTRG1 = PAR_L2SYNC1 + 6,
+    PAR_L2OFS1 = PAR_L2RTRG1 + 6,
+    PAR_INS1 = PAR_L2OFS1 + 6,                   /* 27a: each track's INSERT (voices.c ins_block): its type (INS_*), */
+    PAR_INSA1 = PAR_INS1 + 6,                    /* .. AMOUNT (0: dry, whatever the type), and two knobs the type */
+    PAR_INSB1 = PAR_INSA1 + 6,                   /* .. names (RATE / SHIFT / PITCH, FEEDBACK / DEPTH / SHAPE) */
+    PAR_INSC1 = PAR_INSB1 + 6,
+    PAR_FLTX1 = PAR_INSC1 + 6,                   /* 1.0: FILTER X (dsp.c ch_block): the character filters' ENV AMT, LADDER's
+                                                  * BASS COMP */
+    PAR_DSEND1 = PAR_FLTX1 + 6,                  /* 1.0 Phase 16: the voice into the delay (on top of its output, as
+                                                  * REV SEND; voices.c dly_l) */
+    PAR_DLY_ROUTE = PAR_DSEND1 + 6,              /* .. the bus and the delay: 64 PARALLEL, above FX > DLY (127: the bus
+                                                  * into the delay, as before Phase 16), below DLY > FX (fxbus.c) */
+    PAR_REV_FX,                                  /* .. REV > FX: the reverb's return's share into the bus's input */
+    NPAR
+};
+#define DLY_ROUTE_OLD 127u                           /* (a kit saved before Phase 16: the delay after the bus) */
+/* 1.0: the always-on delay's own settings (fxbus.c), in five of the seven bytes the LXR's kit leaves unused (221 ..:
+ * 0 in every LXR and factory kit; only Elixir 0.2 used them, project.c clears a version-2 project's), so a kit stays
+ * 470 bytes and an LXR still reads it. TIME, FEEDBACK, TONE, LEVEL (0: the delay off), TAPE's WOW. Not lockable (as
+ * the bytes were), but LFO targets (XT_PAR) */
+enum { PAR_DLY_TIME = PAR_UNUSED_1, PAR_DLY_FB, PAR_DLY_TONE, PAR_DLY_LEVEL, PAR_DLY_WOW,
+       PAR_DLY_BAND };                           /* (1.0: BAND, the loop's resonant peak: 0 off, then its frequency) */
+_Static_assert(PAR_DLY_BAND <= PAR_UNUSED_7, "the delay: in the LXR's unused bytes");
+static inline int par_dly(uint32_t p) { return p >= PAR_DLY_TIME && p <= PAR_DLY_BAND; }
+#define KIT_LEN (END_OF_SOUND_PARAMETERS + NPAR - NUM_PARAMS)
+#define KIT_GAP (NUM_PARAMS - END_OF_SOUND_PARAMETERS)
+static inline int par_sound(uint32_t p) { return p < END_OF_SOUND_PARAMETERS || (p >= NUM_PARAMS && p < NPAR); }
+static inline uint32_t kit_par(uint32_t i) { return i < END_OF_SOUND_PARAMETERS ? i : i + KIT_GAP; }   /* index -> p */
+static inline uint32_t kit_idx(uint32_t p) { return p < END_OF_SOUND_PARAMETERS ? p : p - KIT_GAP; }   /* p -> index */
+
+static uint8_t par[NPAR];                        /* the edit buffer (activeParameters, then Elixir's) */
+static uint8_t morph_par[KIT_LEN];               /* the morph target kit (kit layout: kit_par) */
+static uint8_t morph_amt;                        /* 0..255 (PAR_MORPH): 0 = the kit as it is */
+
+/* automation (step parameter locks): the parameter each track's two lanes hold, and the value */
+#define NO_AUTOMATION 0xFFu
+static uint16_t auto_par[NTRACK][3];             /* 0 = none (lanes 0, 1: the step's locks; 2: a link's DECAY) */
+static uint8_t auto_val[NTRACK][3];
+static uint32_t auto_lk[(NPAR + 31u) / 32u];       /* 0.15: the parameters a lock holds (auto_lk_update) */
+
+/* a lock's destination code (12 bits: the step's byte, p1n / p2n, and 4 bits in the pattern's lhi, seq.c). Below
+ * 256, the LXR's numbers: the parameter + 1 below 128 (its "stupid offset"), the parameter above, 0xFF none. From
+ * 256, Elixir's parameters as they are. (0.2 stored Elixir's in the numbers the LXR leaves free, 247..254 and
+ * 221..227; project.c lock_v2 moves a version-2 project's locks over.) */
+static uint32_t autodest_to_par(uint32_t d)
+{
+    if (d == NO_AUTOMATION || d == 0u)
+        return 0;
+    if (d >= 256u)
+        return d < NPAR ? d : 0u;
+    return d <= 127u ? d - 1u : d;
+}
+static uint32_t par_to_autodest(uint32_t p)
+{
+    if (p >= NUM_PARAMS)
+        return p < NPAR && p != PAR_REV_TYPE ? p : NO_AUTOMATION;
+    return p == 0u ? NO_AUTOMATION : p < 127u ? p + 1u : p;
+}
+_Static_assert(NPAR < 1024 && NUM_PARAMS >= 256, "lock codes: 10 bits (seq.c lhi: the rest a step's length), Elixir's past the LXR's byte");
+#define NLOCK_K (NPAR - NUM_PARAMS - 1u)             /* Elixir's lockable parameters: all but PAR_REV_TYPE */
+#define LOCK_RUSH_IDX (NUM_MOD_TARGETS + NLOCK_K)    /* 39: the STEP page's last lock target: RUSH (seq.c RUSH_CODE) */
+static inline int par_lockable(uint32_t p)
+{
+    return par_sound(p) && !(p >= PAR_UNUSED_1 && p <= PAR_UNUSED_7) && par_to_autodest(p) != NO_AUTOMATION;
+}
+/* the lock targets the STEP page picks from: the LXR's (MOD_TARGETS), then Elixir's (PAR_REV_TYPE left out) */
+static uint32_t lock_target_par(uint32_t idx)
+{
+    uint32_t p;
+    if (idx < NUM_MOD_TARGETS)
+        return MOD_TARGETS[idx][1];
+    if (idx >= NUM_MOD_TARGETS + NLOCK_K)
+        return 0;
+    p = NUM_PARAMS + idx - NUM_MOD_TARGETS;
+    return p >= PAR_REV_TYPE ? p + 1u : p;
+}
+static uint32_t lock_target_idx(uint32_t p)          /* (Elixir's parameter p: its index there) */
+{
+    return NUM_MOD_TARGETS + p - NUM_PARAMS - (p > PAR_REV_TYPE ? 1u : 0u);
+}
+/* 25a: LFO and velocity targets past the LXR's 229 (a kit's target byte): Elixir's parameters. The first XT_NV are
+ * per voice and mean the LFO's destination voice's (VEL DEST: its own voice's), so a voice's list is the LXR's for
+ * it and then these; the rest are the kit's own. No switches (model, filter type, choke, output): a moving one
+ * would click. The LXR's numbers keep their meaning; an older Elixir loads these as OFF */
+static const uint16_t XT_PAR[] = {PAR_FX_SEND1, PAR_REV_SEND1, PAR_TILT1, PAR_BITS1, PAR_RND_PITCH1, PAR_RND_DECAY1,
+                                  PAR_RND_FILTER1, PAR_RND_PAN1, PAR_XAMT1, PAR_MDECAY1, PAR_MDAMP1, PAR_MMAT1,
+                                  PAR_MPOS1, PAR_MEXC1, PAR_MTENS1,
+                                  PAR_REV_SIZE, PAR_REV_DAMP, PAR_REV_LEVEL, PAR_ECHOREV, PAR_GLITCH, PAR_FXDIRT,
+                                  PAR_MDIRT_AMT,
+                                  PAR_L2RATE1, PAR_L2AMT1, PAR_INSA1, PAR_INSB1, PAR_INSC1};   /* (25b, 27a: per voice) */
+#define XT_NV 15u
+#define XT_NV2 22u                                   /* (the per-voice ones added after the kit's) */
+#define NXT (sizeof XT_PAR / sizeof XT_PAR[0])
+#define NUM_TARGETS_X (NUM_MOD_TARGETS + NXT)
+_Static_assert(NUM_MOD_TARGETS + sizeof XT_PAR / sizeof XT_PAR[0] <= 256u, "a kit's target byte");
+static uint32_t target_ok(uint32_t t) { return t < NUM_TARGETS_X; }   /* (27a: all 256 of a byte, now) */
+static uint32_t xt_par(uint32_t idx, uint32_t vi)   /* a target past the LXR's, for voice vi: the parameter (0 none) */
+{
+    uint32_t k = idx - NUM_MOD_TARGETS;
+    if (idx < NUM_MOD_TARGETS || k >= NXT)
+        return 0;
+    return XT_PAR[k] + (k < XT_NV || k >= XT_NV2 ? (vi < NVOICE ? vi : 0u) : 0u);
+}
+static uint32_t lfo_voice(uint32_t l)                /* LFO l's destination voice (PAR_VOICE_LFO: 1..6; OFF: D1's */
+{                                                    /* .. list, as the UI's target_range) */
+    uint32_t v = par[PAR_VOICE_LFO1 + l];
+    return v >= 1u && v <= 6u ? v - 1u : 0u;
+}
+/* 1.0: the always-on delay's TIME, FEEDBACK, TONE, LEVEL as LFO and velocity targets. The byte's 256 are taken, but
+ * the LXR's list has the FX bus's P1..P4 once in each voice's part (the same four parameters six times): D2's four
+ * (TGT_DLY ..) are the delay's now, D2's list shows D1's four for the bus (they reach any voice's), and an older kit's
+ * D2 FX P targets become D1's as it loads (kit.c dly_migrate) */
+#define TGT_DLY (MOD_TARGET_VOICE[1][1] - 3u)         /* (74) */
+static inline int tgt_dly(uint32_t idx) { return idx >= TGT_DLY && idx < TGT_DLY + 4u; }
+static uint32_t mod_dest(uint32_t idx, uint32_t vi)  /* a target byte -> the parameter (0: none) */
+{
+    if (tgt_dly(idx))
+        return PAR_DLY_TIME + idx - TGT_DLY;
+    return idx < NUM_MOD_TARGETS ? MOD_TARGETS[idx][1] : xt_par(idx, vi);
+}
+
+static int is_lfo_sync(uint32_t p)                  /* 1.0: LFO 1's and LFO 2's SYNC (SYNC_ORDER) */
+{
+    return (p >= PAR_SYNC_LFO1 && p <= PAR_SYNC_LFO6) || (p >= PAR_L2SYNC1 && p < PAR_L2SYNC1 + 6u);
+}
+/* the largest value of Elixir's parameters */
+static uint32_t par_max_k(uint32_t p)
+{
+    if (p == PAR_REV_TYPE)
+        return NREV - 1u;
+    if (p >= PAR_BITS1 && p < PAR_BITS1 + 6u)
+        return 15;
+    if (p >= PAR_SHAPE1 && p < PAR_SHAPE1 + 6u)
+        return NSHAPE - 1u;
+    if (p >= PAR_CHOKE1 && p < PAR_CHOKE1 + 6u)
+        return 4;
+    if (p >= PAR_XSRC1 && p < PAR_XSRC1 + 6u)
+        return 6;
+    if (p >= PAR_XMODE1 && p < PAR_XMODE1 + 6u)
+        return NXMODE - 1u;
+    if (p >= PAR_MODEL1 && p < PAR_MODEL1 + 6u)
+        return NMODEL - 1u;
+    if ((p >= PAR_LFOMODE1 && p < PAR_LFOMODE1 + 6u) || (p >= PAR_L2MODE1 && p < PAR_L2MODE1 + 6u))
+        return NLFOMODE - 1u;
+    if (p >= PAR_L2TGT1 && p < PAR_L2TGT1 + 6u)
+        return NUM_TARGETS_X - 1u;
+    if (p >= PAR_L2WAVE1 && p < PAR_L2WAVE1 + 6u)
+        return NLFO - 1u;
+    if (p >= PAR_L2SYNC1 && p < PAR_L2SYNC1 + 6u)
+        return NSYNC - 1u;
+    if (p >= PAR_L2RTRG1 && p < PAR_L2RTRG1 + 6u)
+        return 6;
+    if (p >= PAR_INS1 && p < PAR_INS1 + 6u)
+        return NINS - 1u;
+    if (p >= PAR_GATE1 && p < PAR_GATE1 + 6u)
+        return 1;
+    if (p == PAR_DSYNC)
+        return 1;
+    if (p == PAR_DPITCH)
+        return NDPITCH - 1u;
+    if (p == PAR_MDIRT)
+        return NDIRT - 1u;
+    if (p == PAR_MC_RATIO)
+        return NCRATIO - 1u;
+    if (p == PAR_MC_SRC)
+        return NVOICE;
+    return 127;
+}
+
+/* 24: the models a voice has: D1-D3 all, SN-HH the LXR's engine and MICRO's (one of Rings' or Plaits': the LXR's).
+ * 0.24: P WTABLE none, unless built in (ELIXIR_WTABLE, rings.c). 1.0 (10c): P GRAIN, P MODAL none; NOISE every voice.
+ * (Phase 21: P PARTCL's number RAIN's, when P PARTCL isn't built: D1-D3) */
+static inline int model_ok(uint32_t vi, uint32_t md)
+{
+    return (ELIXIR_WTABLE || md != MD_PL0 + PE_WTBL) && md != MD_PMODAL &&
+           (vi <= 2u || md == 0u || md == MD_NOISE || (md >= MD_MC0 && md < NMODEL));
+}
+/* Elixir's light models on D1-D3 that play beside the two (CLOUD; Phase 21: RAIN, measured: plaits.c rn_render) */
+static inline int model_light(uint32_t md) { return md == MD_CLOUD || (!ELIXIR_PARTICLE && md == MD_RAIN); }
+/* a Rings or Plaits model, the ones the models' limit counts (not MICRO, ENSEMBLE, NOISE, CLOUD, RAIN: the light ones) */
+static inline int model_counted(uint32_t md) { return md && md < MD_MC0 && md != MD_NOISE && !model_light(md); }
+/* 1.0 (10c): Plaits' engines as they are (P GRAIN, P NOISE, P MODAL dropped; P WTABLE parked): the spells' and
+ * WANDER's random picks */
+static const uint8_t PL_LIVE[] = {0, 1, 2, 3, 4, 6, 7, 8, 10, 11, 13, 14, 15};   /* (1.0: 3, CLOUD; 10, RAIN (or
+                                                      * P PARTCL, built in)) */
+#define NPL_LIVE (sizeof PL_LIVE / sizeof PL_LIVE[0])
+/* the model a voice plays for md (a kit's, a lock's, a modulation's): md if it has it, else the nearest it has
+ * (10c: P MODAL as Rings' MODAL; 0.24: P WTABLE, not built in, as P ADD), else the LXR's */
+static uint32_t model_pick(uint32_t vi, uint32_t md)
+{
+    if (model_ok(vi, md))
+        return md;
+    if (vi <= 2u && md == MD_PMODAL)
+        return MD_MODAL;
+    if (vi <= 2u && md == MD_PL0 + PE_WTBL)
+        return MD_PL0 + PE_ADD;
+    return 0u;
+}
+
+/* LXR presetManager.c interpolate: a + (b - a) x / 256, rounded */
+static uint32_t morph_lerp(uint32_t a, uint32_t b, uint32_t x)
+{
+    uint32_t f = (uint32_t)((int32_t)(a * 256u) + ((int32_t)b - (int32_t)a) * (int32_t)x) & 0xFFFFu;
+    return (f & 0xFFu) < 0x7Fu ? f >> 8 : (f >> 8) + 1u;
+}
+/* .. 28: the filter type moves through its values as the LXR's, but one of Elixir's types at either end switches at
+ * 50% (no sweep through the types between) */
+/* .. 25b, 27a: LFO 2's switches (target, wave, mode, sync, retrigger) and the insert's type switch at 50%; when they
+ * differ between the kits, LFO 2's amount and the insert's AMOUNT go down to 0 there and up again (a x (1 - 2m), then
+ * b x (2m - 1)), so nothing jumps. (a, b: par[] and morph_par[], as every caller has them) */
+static int morph_l2_differs(uint32_t vi)
+{
+    static const uint16_t SW[5] = {PAR_L2TGT1, PAR_L2WAVE1, PAR_L2MODE1, PAR_L2SYNC1, PAR_L2RTRG1};
+    uint32_t i;
+    for (i = 0; i < 5u; i++)
+        if (par[SW[i] + vi] != morph_par[kit_idx(SW[i] + vi)])
+            return 1;
+    return 0;
+}
+static uint32_t morph_mix(uint32_t p, uint32_t a, uint32_t b, uint32_t x)
+{
+    if (p >= PAR_FILTER_TYPE_1 && p <= PAR_FILTER_TYPE_6 && (a >= F_OFF || b >= F_OFF) && a != b)
+        return x < 128u ? a : b;
+    if (p >= PAR_L2TGT1 && p < PAR_L2OFS1)          /* (target, wave, mode, sync, retrigger: in a row) */
+        return x < 128u ? a : b;
+    if (p >= PAR_SYNC_LFO1 && p <= PAR_SYNC_LFO6 && a != b && (a >= 12u || b >= 12u))   /* (1.0: a sync value past */
+        return x < 128u ? a : b;                     /* .. the LXR's: by length they are between, not in a row) */
+    if ((p >= PAR_INS1 && p < PAR_INS1 + 6u) || (p == PAR_DLY_BAND && (!a || !b)))   /* (1.0: BAND on or OFF, */
+        return x < 128u ? a : b;                     /* .. halfway) */
+    if ((p >= PAR_L2AMT1 && p < PAR_L2AMT1 + 6u && morph_l2_differs(p - PAR_L2AMT1)) ||
+        (p >= PAR_INSA1 && p < PAR_INSA1 + 6u && par[PAR_INS1 + p - PAR_INSA1] != morph_par[kit_idx(PAR_INS1 + p - PAR_INSA1)]))
+        return x < 128u ? (a * (128u - x) + 64u) / 128u : (b * (x - 128u) + 63u) / 127u;
+    return morph_lerp(a, b, x);
+}
+static int morph_excluded(uint32_t p)            /* the outputs and the modulation targets stay the kit's (1.0: and
+                                                  * the delay's MODE: it lerped through the modes between) */
+{
+    return (p >= PAR_AUDIO_OUT1 && p <= PAR_AUDIO_OUT6) || (p >= PAR_VEL_DEST_1 && p <= PAR_VEL_DEST_6) ||
+           (p >= PAR_VOICE_LFO1 && p <= PAR_TARGET_LFO6) || p == PAR_FX_TYPE || p == PAR_MORPH_KIT_DEST ||
+           p == PAR_REV_TYPE || (p >= PAR_MODEL1 && p < PAR_MODEL1 + 6u) || (p >= PAR_LFOMODE1 && p <= PAR_DSYNC) ||
+           p == PAR_DPITCH || p == PAR_FX_DELAY_TYPE || p == PAR_MDIRT || p == PAR_MC_RATIO || p == PAR_MC_SRC;
+}
+
+/* the value a parameter sounds with: an automation lock, else the kit's (morphed) */
+static uint32_t par_base(uint32_t p)
+{
+    uint32_t t, k;
+    if (p < NPAR && auto_lk[p >> 5] & 1u << (p & 31u))    /* (0.15: a lock's, found without the search at every other) */
+        for (t = 0; t < NTRACK; t++)
+            for (k = 0; k < 3u; k++)
+                if (auto_par[t][k] == p)
+                    return auto_val[t][k];
+    if (par_sound(p) && morph_amt && !morph_excluded(p))
+        return morph_mix(p, par[p], morph_par[kit_idx(p)], morph_amt);
+    return par[p];
+}
+
+/* ------------------------------------------------------------------ apply --- */
+static const uint8_t COARSE_P[NVOICE] = {PAR_COARSE1, PAR_COARSE2, PAR_COARSE3, PAR_COARSE4, PAR_COARSE5, PAR_COARSE6};
+
+static void set_coarse(osc_t *o, uint32_t itg)
+{
+    o->midi_freq = (uint16_t)((o->midi_freq & 0x00FFu) | (itg & 0xFFu) << 8);
+    osc_recalc(o);
+}
+static void set_fine(osc_t *o, uint32_t itg)
+{
+    o->midi_freq = (uint16_t)((o->midi_freq & 0xFF00u) | (itg & 0xFFu));
+    osc_recalc(o);
+}
+/* a waveform, a filter type ..: the setting, or (modulated) n x the 0..1 value */
+static uint32_t pick(uint32_t itg, uint32_t q16, int mod, uint32_t n)
+{
+    if (mod) {
+        uint32_t w = (uint32_t)(((uint64_t)n * q16) >> 16);
+        return w >= n ? n - 1u : w;
+    }
+    return itg;
+}
+
+#define MOD_DEC_MAX 120u                             /* (an amp decay of 120: ~25 s) */
+/* midiParser_ccHandler: the parameter p at the value itg (0..127, its menu index, ..) / q16 (0..1, Q16);
+ * mod: a modulator's value (the LXR's isFloatModulator) */
+static void snd_apply(uint32_t p, uint32_t itg, uint32_t q16, int mod)
+{
+    int32_t f = (int32_t)(q16 > 65536u ? 65536u : q16);
+    uint32_t i;
+    if (p >= PAR_COARSE1 && p <= PAR_FINE6) {                        /* coarse / fine of the main oscillators */
+        osc_t *o = &vc[(p - PAR_COARSE1) >> 1].osc;
+        if ((p - PAR_COARSE1) & 1u)
+            set_fine(o, itg);
+        else
+            set_coarse(o, itg);
+        return;
+    }
+    if (p >= PAR_FILTER_FREQ_1 && p <= PAR_FILTER_FREQ_6) {
+        vc[p - PAR_FILTER_FREQ_1].flt.fval = (uint32_t)f;
+        vc[p - PAR_FILTER_FREQ_1].flt.dirty = 1;
+        return;
+    }
+    if (p >= PAR_RESO_1 && p <= PAR_RESO_6) {                        /* SVF_setReso: q = 1 - r (0.02 below 0.1) */
+        int32_t q = 65536 - f;
+        vc[p - PAR_RESO_1].flt.q = q < 6554 ? 1311 : q;
+        vc[p - PAR_RESO_1].flt.rk = f;               /* (1.0: the character types' own curve) */
+        vc[p - PAR_RESO_1].flt.dirty = 1;
+        return;
+    }
+    if (p >= PAR_VELOA1 && p <= PAR_VELOD6_OPEN) {
+        static const uint8_t VI[13] = {0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 5};
+        uint32_t k = p - PAR_VELOA1;
+        voice_t *v = &vc[VI[k]];
+        itg &= 127u;
+        if (mod && ((k & 1u) || k >= 11u) && itg > MOD_DEC_MAX) {   /* (0.25.3: a decay modulated never past the knob
+                                                      * or MOD_DEC_MAX: 127 is endless, and a held LFO kept a hit
+                                                      * ringing past STOP; CONCRETE DRIFT's white noise) */
+            uint32_t b = par_base(p);
+            itg = b > MOD_DEC_MAX ? (itg < b ? itg : b) : MOD_DEC_MAX;
+        }
+        if (k == 11u)
+            v->dec_closed = EG_DEC[itg];
+        else if (k == 12u)
+            v->dec_open = EG_DEC[itg];
+        else if (k & 1u)
+            v->aeg.dec = v->dec_base = EG_DEC[itg];
+        else
+            v->aeg.atk = EG_ATK[itg];
+        return;
+    }
+    if (p >= PAR_VOL_SLOPE1 && p <= PAR_VOL_SLOPE6) {
+        slope_eg_t *e = &vc[p - PAR_VOL_SLOPE1].aeg;
+        e->k = EG_SLOPE[itg & 127u];
+        e->ik = EG_ISLOPE[itg & 127u];
+        return;
+    }
+    if (p >= PAR_MOD_EG1 && p <= PAR_MOD_EG4) {                      /* the pitch EG's decay (DecayEg_setDecay) */
+        vc[p - PAR_MOD_EG1].peg.dec = EG_ATK[itg & 127u];
+        return;
+    }
+    if (p >= PAR_MODAMNT1 && p <= PAR_MODAMNT4) {
+        vc[p - PAR_MODAMNT1].peg_amt = (int32_t)PITCH_AMT[itg & 127u];
+        return;
+    }
+    if (p >= PAR_PITCH_SLOPE1 && p <= PAR_PITCH_SLOPE4) {
+        vc[p - PAR_PITCH_SLOPE1].peg.k = DEC_SLOPE[itg & 127u];
+        return;
+    }
+    if (p >= PAR_FMAMNT1 && p <= PAR_FM_FREQ3) {
+        voice_t *v = &vc[(p - PAR_FMAMNT1) >> 1];
+        if ((p - PAR_FMAMNT1) & 1u)
+            set_coarse(&v->mod, itg);
+        else
+            v->fm1 = f >> 1;
+        return;
+    }
+    if (p >= PAR_VOL1 && p <= PAR_VOL6) {
+        vc[p - PAR_VOL1].vol = f >> 1;
+        return;
+    }
+    if (p >= PAR_DRIVE1 && p <= PAR_HAT_DISTORTION) {
+        vc[p - PAR_DRIVE1].dk = dist_k((uint32_t)f);
+        vc[p - PAR_DRIVE1].drive = f;
+        return;
+    }
+    if (p >= PAR_VOICE_DECIMATION1 && p <= PAR_VOICE_DECIMATION_ALL) {
+        decim_rate[p - PAR_VOICE_DECIMATION1] = lut1024u(DECIM, (uint32_t)f);
+        return;
+    }
+    if (p >= PAR_FREQ_LFO1 && p <= PAR_FREQ_LFO6) {
+        lfo_t *l = &vc[p - PAR_FREQ_LFO1].lfo;
+        l->rate = (uint32_t)f;
+        lfo_update_inc(l);
+        return;
+    }
+    if (p >= PAR_AMOUNT_LFO1 && p <= PAR_AMOUNT_LFO6) {
+        lfo_mod[p - PAR_AMOUNT_LFO1].amount = f;
+        return;
+    }
+    if (p >= PAR_FILTER_DRIVE_1 && p <= PAR_FILTER_DRIVE_6) {        /* SVF_setDrive: 0.4 + d^2 x 6, Q12 */
+        vc[p - PAR_FILTER_DRIVE_1].flt.drive = 1638 + (int32_t)(((int64_t)f * f * 6) >> 20);
+        return;
+    }
+    if (p >= PAR_MIX_MOD_1 && p <= PAR_MIX_MOD_3) {
+        vc[p - PAR_MIX_MOD_1].mix_oscs = itg != 0u;
+        return;
+    }
+    if (p >= PAR_VOLUME_MOD_ON_OFF1 && p <= PAR_VOLUME_MOD_ON_OFF6) {
+        vc[p - PAR_VOLUME_MOD_ON_OFF1].vol_mod = itg != 0u;
+        return;
+    }
+    if (p >= PAR_VELO_MOD_AMT_1 && p <= PAR_VELO_MOD_AMT_6) {
+        velo_mod[p - PAR_VELO_MOD_AMT_1].amount = f;
+        return;
+    }
+    if (p >= PAR_VEL_DEST_1 && p <= PAR_VEL_DEST_6) {                /* a modTargets index -> the parameter */
+        velo_mod[p - PAR_VEL_DEST_1].dest = (uint16_t)mod_dest(itg, p - PAR_VEL_DEST_1);
+        return;
+    }
+    if (p >= PAR_WAVE_LFO1 && p <= PAR_WAVE_LFO6) {
+        vc[p - PAR_WAVE_LFO1].lfo.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NLFO);
+        return;
+    }
+    if (p >= PAR_TARGET_LFO1 && p <= PAR_TARGET_LFO6) {
+        lfo_mod[p - PAR_TARGET_LFO1].dest = (uint16_t)mod_dest(itg, lfo_voice(p - PAR_TARGET_LFO1));
+        return;
+    }
+    if (p >= PAR_VOICE_LFO1 && p <= PAR_VOICE_LFO6) {                /* (25a: a voice's own target moves with it) */
+        uint32_t l = p - PAR_VOICE_LFO1, t = par[PAR_TARGET_LFO1 + l];
+        if (t >= NUM_MOD_TARGETS)
+            lfo_mod[l].dest = (uint16_t)mod_dest(t, lfo_voice(l));
+        return;
+    }
+    if (p >= PAR_RETRIGGER_LFO1 && p <= PAR_RETRIGGER_LFO6) {
+        vc[p - PAR_RETRIGGER_LFO1].lfo.retrig = (uint8_t)(mod ? (7u * (uint32_t)f) >> 16 : itg);
+        return;
+    }
+    if (p >= PAR_SYNC_LFO1 && p <= PAR_SYNC_LFO6) {
+        lfo_t *l = &vc[p - PAR_SYNC_LFO1].lfo;
+        l->sync = (uint8_t)itg;
+        lfo_update_inc(l);
+        return;
+    }
+    if (p >= PAR_OFFSET_LFO1 && p <= PAR_OFFSET_LFO6) {
+        vc[p - PAR_OFFSET_LFO1].lfo.offset = f >= 65536 ? 0xFFFFFFFFu : (uint32_t)f << 16;
+        return;
+    }
+    if (p >= PAR_FILTER_TYPE_1 && p <= PAR_FILTER_TYPE_6) {
+        uint32_t t = mod ? ((uint32_t)(((uint64_t)F_LP2 * (uint32_t)f) >> 16) + 1u) : itg + 1u;
+        vc[p - PAR_FILTER_TYPE_1].ftype = (uint8_t)(mod && t >= F_OFF ? F_OFF - 1u : t);
+        return;
+    }
+    if (p >= PAR_TRANS1_VOL && p <= PAR_TRANS6_VOL) {
+        vc[p - PAR_TRANS1_VOL].tr.vol = f >> 1;
+        return;
+    }
+    if (p >= PAR_TRANS1_WAVE && p <= PAR_TRANS6_WAVE) {              /* transient_setWaveform */
+        uint32_t w = pick(itg, (uint32_t)f, mod, LXR_TRANS_N);
+        vc[p - PAR_TRANS1_WAVE].tr.wave = (uint8_t)(w < LXR_TRANS_N + 2u ? w : 0u);
+        return;
+    }
+    if (p >= PAR_TRANS1_FREQ && p <= PAR_TRANS6_FREQ) {              /* 1 + (v / 33.9 - 0.75): x0.25 .. x4 */
+        vc[p - PAR_TRANS1_FREQ].tr.inc = 262144u + (((itg & 127u) << 20) * 10u) / 339u;
+        return;
+    }
+    if (p >= PAR_AUDIO_OUT1 && p <= PAR_AUDIO_OUT6) {          /* (FX BUS: a kit from before the sends) */
+        vc[p - PAR_AUDIO_OUT1].route = (uint8_t)(itg < R_FX ? itg : R_ST1);
+        vc[p - PAR_AUDIO_OUT1].out_fx = itg == R_FX;
+        return;
+    }
+    if (p >= PAR_RND_PITCH1 && p < PAR_XSRC1) {                     /* random per hit: the amounts, 0..127 */
+        uint32_t k = p - PAR_RND_PITCH1;
+        vc[k % 6u].rnd[k / 6u] = (uint8_t)(itg & 127u);
+        return;
+    }
+    if (p >= PAR_FX_SEND1 && p < PAR_FX_SEND1 + NVOICE) {
+        vc[p - PAR_FX_SEND1].fx_send = f >> 1;
+        return;
+    }
+    if (p >= PAR_REV_SEND1 && p < PAR_REV_SEND1 + NVOICE) {
+        vc[p - PAR_REV_SEND1].rev_send = f >> 1;
+        return;
+    }
+    if (p >= PAR_DSEND1 && p < PAR_DSEND1 + NVOICE) {   /* (1.0 Phase 16) */
+        vc[p - PAR_DSEND1].dly_send = f >> 1;
+        return;
+    }
+    if (p >= PAR_PWM_1 && p <= PAR_PWM_6) {
+        vc[p - PAR_PWM_1].pwm = (uint32_t)f;
+        return;
+    }
+    if (p >= PAR_FX_P1 && p <= PAR_FX_P4) {                          /* FxBus_setParameter */
+        fx.p[p - PAR_FX_P1] = f;
+        fxbus_update();
+        return;
+    }
+    switch (p) {
+    case PAR_OSC_WAVE_DRUM1:
+    case PAR_OSC_WAVE_DRUM2:
+    case PAR_OSC_WAVE_DRUM3:
+        vc[p - PAR_OSC_WAVE_DRUM1].osc.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_OSC_WAVE_SNARE:
+        vc[V_SNARE].osc.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_WAVE1_CYM:
+        vc[V_CYM].osc.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_WAVE1_HH:
+        vc[V_HAT].osc.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_MOD_WAVE_DRUM1:
+    case PAR_MOD_WAVE_DRUM2:
+    case PAR_MOD_WAVE_DRUM3:
+        vc[p - PAR_MOD_WAVE_DRUM1].mod.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_WAVE2_CYM:
+        vc[V_CYM].mod.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_WAVE3_CYM:
+        vc[V_CYM].mod2.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_WAVE2_HH:
+        vc[V_HAT].mod.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_WAVE3_HH:
+        vc[V_HAT].mod2.wave = (uint8_t)pick(itg, (uint32_t)f, mod, NWAVE);
+        break;
+    case PAR_NOISE_FREQ1:                                            /* the snare's noise: v x 22 kHz */
+        vc[V_SNARE].mod.note_inc = (uint32_t)(((uint64_t)f * 22000u * 97391u) >> 16);
+        break;
+    case PAR_MIX1:
+        vc[V_SNARE].mix = f >> 1;
+        break;
+    case PAR_MOD_OSC_F1_CYM:
+        set_coarse(&vc[V_CYM].mod, itg);
+        break;
+    case PAR_MOD_OSC_F2_CYM:
+        set_coarse(&vc[V_CYM].mod2, itg);
+        break;
+    case PAR_MOD_OSC_GAIN1_CYM:
+        vc[V_CYM].fm1 = f >> 1;
+        break;
+    case PAR_MOD_OSC_GAIN2_CYM:
+        vc[V_CYM].fm2 = f >> 1;
+        break;
+    case PAR_MOD_OSC_F1:
+        set_coarse(&vc[V_HAT].mod, itg);
+        break;
+    case PAR_MOD_OSC_F2:
+        set_coarse(&vc[V_HAT].mod2, itg);
+        break;
+    case PAR_MOD_OSC_GAIN1:
+        vc[V_HAT].fm1 = f >> 1;
+        break;
+    case PAR_MOD_OSC_GAIN2:
+        vc[V_HAT].fm2 = f >> 1;
+        break;
+    case PAR_REPEAT4:
+        vc[V_SNARE].aeg.repeat = (uint8_t)itg;
+        break;
+    case PAR_REPEAT5:
+        vc[V_CYM].aeg.repeat = (uint8_t)itg;
+        break;
+    case PAR_PAN1:
+    case PAR_PAN2:
+    case PAR_PAN3:
+        vc[p - PAR_PAN1].pan = (uint8_t)itg;
+        break;
+    case PAR_PAN4:
+    case PAR_PAN5:
+    case PAR_PAN6:
+        vc[p - PAR_PAN4 + 3u].pan = (uint8_t)itg;
+        break;
+    case PAR_FX_TYPE:                                /* (1.0: DELAY isn't a type now: an older kit's plays as OFF) */
+        fx.type = (uint8_t)fx_live(itg);
+        fxbus_update();
+        break;
+    case PAR_DLY_TIME:                               /* (1.0: fxbus_early moves the delay there) */
+        fx.dl_t = f;
+        break;
+    case PAR_DLY_FB:
+        fx.d_fb = f;
+        break;
+    case PAR_DLY_TONE:                               /* (Delay_setFilter's f^2, from ~0.02: never shut) */
+        fx.d_tone = 1311 + (int32_t)(((int64_t)f * f * 64225) >> 32);
+        break;
+    case PAR_DLY_LEVEL:
+        fx.dl_lvl = f >> 1;
+        break;
+    case PAR_DLY_WOW:
+        fx.d_wow = f;
+        break;
+    case PAR_DLY_BAND:                               /* (1.0: off -> on: from rest) */
+        if (!fx.band && itg)
+            memset(fx.bd, 0, sizeof fx.bd);
+        fx.band = (uint8_t)(itg & 127u);
+        break;
+    case PAR_FX_ROUTING:
+        fx.route = R_ST1;                            /* (0.19: always stereo, the FM-1's one output; a kit's */
+        (void)itg;                                   /* .. side-only bus from the LXR plays in stereo) */
+        break;
+    case PAR_FX_DRY_WET:
+        i = itg > 100u ? 100u : itg;
+        fx.dw = (int32_t)(i * 32768u / 100u);
+        break;
+    case PAR_FX_DIST_TYPE:
+        fx.dist_type = (uint8_t)itg;
+        break;
+    case PAR_FX_RATIO:
+        fx.ratio = (uint8_t)itg;
+        break;
+    case PAR_FX_WAVE:
+        fx.ring_wave = (uint8_t)itg;
+        break;
+    case PAR_FX_DELAY_TYPE:
+        fx.d_off = (uint8_t)(itg == DELAY_OFF);      /* (1.0: OFF fades out, fxbus_process; the mode stays) */
+        if (fx.d_off) {
+            fx.dt_next = 0xFFu;
+            break;
+        }
+        i = dly_mode(itg);
+        if (dly_active() && fx.dl_e)                 /* (1.0: echoes sounding: they fade out first, fxbus_process) */
+            fx.dt_next = (uint8_t)(i != fx.delay_type || fx.dt_next != 0xFFu ? i : 0xFFu);
+        else
+            delay_type_now(i);
+        break;
+    case PAR_DSYNC:
+        fx.d_sync = (uint8_t)(itg != 0u);
+        delay_set_time(fx.d_time);
+        break;
+    case PAR_DSAT:
+        fx.d_sat = (int32_t)(itg & 127u);
+        break;
+    case PAR_ECHOREV:
+        fx.d_echorev = f;
+        break;
+    case PAR_DLY_ROUTE:                              /* (1.0 Phase 16: fxbus.c fx_route) */
+        fx.d_route = (uint8_t)(itg & 127u);
+        break;
+    case PAR_REV_FX:
+        fx.rev_fx = f >> 1;
+        break;
+    case PAR_GLITCH:
+        fx.d_glitch = (int32_t)(itg & 127u) * 516;
+        break;
+    case PAR_DPITCH:
+        fx.d_pitch = (uint8_t)(itg < NDPITCH ? itg : DP_OFF);
+        break;
+    case PAR_FXDIRT:
+        dirt.bus = f;
+        break;
+    case PAR_MDIRT:
+        dirt.type = (uint8_t)(itg < NDIRT ? itg : DT_TAPE);
+        break;
+    case PAR_MDIRT_AMT:
+        dirt.amt = f;
+        break;
+    case PAR_MC_RATIO: case PAR_MC_THR: case PAR_MC_ATK: case PAR_MC_REL: case PAR_MC_SRC: case PAR_MC_GAIN:
+    case PAR_MC_MIX:
+        mc_set(p - PAR_MC_RATIO, itg);
+        break;
+    case PAR_REV_TYPE:
+        rv.type = (uint8_t)(itg < NREV ? itg : 0u);
+        break;
+    case PAR_REV_SIZE:
+        rv.size = (uint8_t)(itg & 127u);
+        break;
+    case PAR_REV_DAMP:
+        rv.damp = (uint8_t)(itg & 127u);
+        break;
+    case PAR_REV_LEVEL:
+        rv.level = f >> 1;
+        break;
+    case PAR_BITS1: case PAR_BITS1 + 1: case PAR_BITS1 + 2: case PAR_BITS1 + 3: case PAR_BITS1 + 4: case PAR_BITS1 + 5:
+        vc[p - PAR_BITS1].bits = (uint8_t)(mod ? (15u * (uint32_t)f) >> 16 : itg > 15u ? 15u : itg);
+        break;
+    case PAR_SHAPE1: case PAR_SHAPE1 + 1: case PAR_SHAPE1 + 2: case PAR_SHAPE1 + 3: case PAR_SHAPE1 + 4:
+    case PAR_SHAPE1 + 5:
+        vc[p - PAR_SHAPE1].shape = (uint8_t)pick(itg < NSHAPE ? itg : 0u, (uint32_t)f, mod, NSHAPE);
+        break;
+    case PAR_TILT1: case PAR_TILT1 + 1: case PAR_TILT1 + 2: case PAR_TILT1 + 3: case PAR_TILT1 + 4: case PAR_TILT1 + 5:
+        vc[p - PAR_TILT1].tilt = (uint8_t)(itg & 127u);
+        break;
+    case PAR_CHOKE1: case PAR_CHOKE1 + 1: case PAR_CHOKE1 + 2: case PAR_CHOKE1 + 3: case PAR_CHOKE1 + 4:
+    case PAR_CHOKE1 + 5:
+        vc[p - PAR_CHOKE1].choke_grp = (uint8_t)(itg > 4u ? 0u : itg);
+        break;
+    case PAR_XSRC1: case PAR_XSRC1 + 1: case PAR_XSRC1 + 2: case PAR_XSRC1 + 3: case PAR_XSRC1 + 4: case PAR_XSRC1 + 5:
+        vc[p - PAR_XSRC1].xsrc = (uint8_t)(itg > 6u ? 0u : itg);
+        break;
+    case PAR_XMODE1: case PAR_XMODE1 + 1: case PAR_XMODE1 + 2: case PAR_XMODE1 + 3: case PAR_XMODE1 + 4:
+    case PAR_XMODE1 + 5:
+        vc[p - PAR_XMODE1].xmode = (uint8_t)pick(itg < NXMODE ? itg : 0u, (uint32_t)f, mod, NXMODE);
+        break;
+    case PAR_XAMT1: case PAR_XAMT1 + 1: case PAR_XAMT1 + 2: case PAR_XAMT1 + 3: case PAR_XAMT1 + 4: case PAR_XAMT1 + 5:
+        vc[p - PAR_XAMT1].xamt = f >> 1;
+        break;
+    case PAR_MODEL1: case PAR_MODEL1 + 1: case PAR_MODEL1 + 2: case PAR_MODEL1 + 3: case PAR_MODEL1 + 4:
+    case PAR_MODEL1 + 5: {                           /* (Rings' and Plaits': the DRUM voices only; 24: MICRO every voice) */
+        uint32_t vi = p - PAR_MODEL1, md = model_pick(vi, pick(itg < NMODEL ? itg : 0u, (uint32_t)f, mod, NMODEL));
+        mi[vi].type = (uint8_t)(md >= MD_MC0 && md < MD_EN ? md - MD_MC0 + 1u : 0u);
+        eno[vi].on = md == MD_EN;                     /* (0.25: ENSEMBLE, every voice, not counted either) */
+        nzo[vi].on = md == MD_NOISE;                  /* (1.0: NOISE, the same) */
+        if (vi <= V_DRUM3) {
+            mdl[vi].want = (uint8_t)(model_counted(md) || model_light(md) ? md : 0u);   /* (MICRO isn't one of
+                                                      * the models; 1.0: CLOUD, RAIN play as they do, not counted) */
+            model_limit();
+        }
+        break;
+    }
+    case PAR_LFOMODE1: case PAR_LFOMODE1 + 1: case PAR_LFOMODE1 + 2: case PAR_LFOMODE1 + 3: case PAR_LFOMODE1 + 4:
+    case PAR_LFOMODE1 + 5:
+        lfo_mode_set(&vc[p - PAR_LFOMODE1].lfo, pick(itg < NLFOMODE ? itg : 0u, (uint32_t)f, mod, NLFOMODE));
+        break;
+    case PAR_GATE1: case PAR_GATE1 + 1: case PAR_GATE1 + 2: case PAR_GATE1 + 3: case PAR_GATE1 + 4: case PAR_GATE1 + 5:
+        vc[p - PAR_GATE1].gate = (uint8_t)(pick(itg ? 1u : 0u, (uint32_t)f, mod, 2) != 0u);
+        if (!vc[p - PAR_GATE1].gate)                 /* (off: a note held lets go) */
+            voice_hold(p - PAR_GATE1, 0);
+        break;
+    default:
+        if (p >= PAR_L2RATE1 && p < PAR_INS1) {     /* 25b: LFO 2, as LFO 1's (its target: its own voice's) */
+            uint32_t vi = (p - PAR_L2RATE1) % 6u;
+            lfo_t *l = &vc[vi].lfo2;
+            switch ((p - PAR_L2RATE1) / 6u) {
+            case 0: l->rate = (uint32_t)f; lfo_update_inc(l); break;
+            case 1: lfo2_mod[vi].amount = f; break;
+            case 2: lfo2_mod[vi].dest = (uint16_t)mod_dest(itg < NUM_TARGETS_X ? itg : 0u, vi); break;
+            case 3: l->wave = (uint8_t)pick(itg < NLFO ? itg : 0u, (uint32_t)f, mod, NLFO); break;
+            case 4: lfo_mode_set(l, pick(itg < NLFOMODE ? itg : 0u, (uint32_t)f, mod, NLFOMODE)); break;
+            case 5: l->sync = (uint8_t)(itg > 11u ? 0u : itg); lfo_update_inc(l); break;
+            case 6: l->retrig = (uint8_t)(mod ? (7u * (uint32_t)f) >> 16 : itg > 6u ? 0u : itg); break;
+            default: l->offset = f >= 65536 ? 0xFFFFFFFFu : (uint32_t)f << 16; break;
+            }
+            break;
+        }
+        if (p >= PAR_FLTX1 && p < NPAR) {            /* 1.0: FILTER X */
+            vc[p - PAR_FLTX1].flt.xamt = f;
+            vc[p - PAR_FLTX1].flt.dirty = 1;
+            break;
+        }
+        if (p >= PAR_INS1 && p < PAR_FLTX1) {        /* 27a: the insert (voices.c ins_block) */
+            ins_t *n = &ins[(p - PAR_INS1) % 6u];
+            uint8_t v = (uint8_t)(mod ? (127u * (uint32_t)f) >> 16 : itg & 127u);
+            switch ((p - PAR_INS1) / 6u) {
+            case 0: n->type = (uint8_t)(mod ? INS_LIVE[pick(0u, (uint32_t)f, mod, 3u)] : ins_live(itg)); break;   /* (1.0: OFF,
+                                                      * SHIFTER, RING) */
+            case 1: n->a = v; break;
+            case 2: n->b = v; break;
+            default: n->c = v; break;
+            }
+            break;
+        }
+        if (p >= PAR_MDECAY1 && p < PAR_LFOMODE1) { /* the model's knobs, 0..127 (24: MICRO's on every voice) */
+            uint32_t vi = (p - PAR_MDECAY1) % 6u;
+            micro_t *u = &mi[vi];
+            uint8_t v = (uint8_t)(mod ? (127u * (uint32_t)f) >> 16 : itg & 127u);
+            en_knob(vi, (p - PAR_MDECAY1) / 6u, v);   /* (0.25: ENSEMBLE's) */
+            nz_knob(vi, (p - PAR_MDECAY1) / 6u, v);   /* (1.0: NOISE's) */
+            switch ((p - PAR_MDECAY1) / 6u) {
+            case 0: u->len = v; break;
+            case 1: u->col = v; break;
+            case 2: u->jit = v; break;
+            case 3: break;                           /* (POSITION: none) */
+            case 4: u->rev = v; break;
+            default: u->tens = v; break;
+            }
+            if (vi <= V_DRUM3) {
+                model_t *m = &mdl[vi];
+                switch ((p - PAR_MDECAY1) / 6u) {
+                case 0: m->dec = v; break;
+                case 1: m->damp = v; break;
+                case 2: m->mat = v; break;
+                case 3: m->pos = v; break;
+                case 4: m->exc = v; break;
+                default: m->tens = v; break;
+                }
+            }
+        }
+        break;
+    }
+}
+
+static inline uint32_t q16_of(uint32_t v) { return v >= 127u ? 65536u : v * 65536u / 127u; }
+/* 1.0: each kit parameter's value as snd_refresh last applied it (0xFF: not known), so morph's sweep skips the ones
+ * whose mixture didn't change (a global LFO on MORPH moves it every 8 ms: most values stay where they were) */
+static uint8_t snd_mv[KIT_LEN] POOL;
+static void snd_refresh(uint32_t p)                 /* apply a parameter's value as it stands */
+{
+    uint32_t v = par_base(p);
+    snd_apply(p, v, q16_of(v), 0);
+    if (par_sound(p))
+        snd_mv[kit_idx(p)] = (uint8_t)(v < 0xFFu ? v : 0xFFu);
+}
+
+/* ------------------------------------------------- modulation nodes --- */
+/* modulationNode.c modNode_updateValue: the target at its value / 127 + amount x (source x 2 - 1), 0..1 */
+static uint32_t mod_touched[(NPAR + 31) / 32];
+static void modnode_move(modnode_t *m, int32_t val, int32_t from)   /* from: where it moves from (-1: its value) */
+{
+    int32_t nv;
+    m->last = val;
+    m->nv = -1;
+    if (!m->dest || !m->amount)
+        return;
+    if (from >= 0) {
+        nv = from;
+    } else if (m->dest >= NUM_PARAMS) {              /* (25a: Elixir's, over their own range: BITS 0..15) */
+        uint32_t mx = par_max_k(m->dest), b = par_base(m->dest);
+        nv = (int32_t)(b >= mx ? 65536u : b * 65536u / mx);
+    } else {
+        nv = (int32_t)q16_of(par_base(m->dest));
+    }
+    nv += (int32_t)(((int64_t)m->amount * (2 * val - 65536)) >> 16);
+    nv = clamp32(nv, 0, 65536);
+    snd_apply(m->dest, (uint32_t)(nv * 127) >> 16, (uint32_t)nv, 1);
+    mod_touched[m->dest >> 5] |= 1u << (m->dest & 31u);
+    m->nv = nv;
+}
+static void modnode_update(modnode_t *m, int32_t val) { modnode_move(m, val, -1); }
+/* once a block, before the voices: what was modulated goes back to its value, then the velocity and the LFOs move
+ * their targets again (modNode_resetTargets, modNode_reassignVeloMod, lfo_dispatchNextValue) */
+static void modnodes_block(void)
+{
+    uint32_t w, i;
+    for (w = 0; w < (NPAR + 31) / 32; w++) {
+        uint32_t m = mod_touched[w];
+        mod_touched[w] = 0;
+        while (m) {
+            uint32_t b = (uint32_t)__builtin_ctz(m);
+            m &= m - 1u;
+            snd_refresh(w * 32u + b);
+        }
+    }
+    for (i = 0; i < NVOICE; i++)
+        modnode_update(&velo_mod[i], velo_mod[i].last);
+    for (i = 0; i < NVOICE; i++)
+        modnode_update(&lfo_mod[i], lfo_calc(&vc[i].lfo));
+    for (i = 0; i < NVOICE; i++) {                   /* 25b: LFO 2 adds to what moved its target before it this block
+                                                      * (the LXR's velocity and LFO 1 each start from the value) */
+        modnode_t *m = &lfo2_mod[i];
+        int32_t from = -1, j;
+        for (j = (int32_t)(3u * NVOICE) - 1; m->dest && from < 0 && j >= 0; j--) {
+            const modnode_t *o = j >= 2 * NVOICE ? &lfo2_mod[j - 2 * NVOICE] : j >= NVOICE ? &lfo_mod[j - NVOICE]
+                                                                                           : &velo_mod[j];
+            if (o != m && (j < 2 * NVOICE || j - 2 * NVOICE < (int32_t)i) && o->dest == m->dest && o->nv >= 0)
+                from = o->nv;
+        }
+        modnode_move(m, lfo_calc(&vc[i].lfo2), from);
+    }
+}
+/* after modnodes_block: each voice's cutoff moved by its hit's random offset and by its cross-mod source's envelope
+ * (XM_FILTER: last block's, voices.c venv), from where the kit, the locks and the LFO put it; back next block */
+static void voice_filter_mods(void)
+{
+    uint32_t i;
+    for (i = 0; i < NVOICE; i++) {
+        voice_t *v = &vc[i];
+        int32_t off = v->rnd_f;
+        uint32_t p = PAR_FILTER_FREQ_1 + i;
+        if (v->xsrc && v->xsrc != i + 1u && v->xmode == XM_FILTER)
+            off += (int32_t)(((int64_t)v->xamt * venv[v->xsrc - 1u]) >> 14);   /* (Q15 x Q15 -> Q16) */
+        if (!off)
+            continue;
+        v->flt.fval = (uint32_t)clamp32((int32_t)v->flt.fval + off, 0, 65536);
+        v->flt.dirty = 1;
+        mod_touched[p >> 5] |= 1u << (p & 31u);
+    }
+}
+
+/* ------------------------------------------------- automation nodes --- */
+static void auto_lk_update(void)
+{
+    uint32_t t, k;
+    memset(auto_lk, 0, sizeof auto_lk);
+    for (t = 0; t < NTRACK; t++)
+        for (k = 0; k < 3u; k++)
+            if (auto_par[t][k])
+                auto_lk[auto_par[t][k] >> 5] |= 1u << (auto_par[t][k] & 31u);
+}
+/* automationNode.c: a triggered step's two locks. The lane's last parameter goes back to its value first */
+static void auto_set(uint32_t track, uint32_t lane, uint32_t dest, uint32_t val)
+{
+    uint32_t old = auto_par[track][lane], p = autodest_to_par(dest);
+    auto_par[track][lane] = 0;
+    auto_lk_update();
+    if (old)
+        snd_refresh(old);
+    if (p && par_sound(p)) {
+        auto_par[track][lane] = (uint16_t)p;
+        auto_val[track][lane] = (uint8_t)val;
+        auto_lk_update();
+        snd_apply(p, val, q16_of(val), 0);
+        snd_mv[kit_idx(p)] = 0xFFu;                  /* (not snd_refresh's: the sweep applies it next time) */
+    }
+}
+static void auto_clear_all(void)
+{
+    uint32_t t, k;
+    for (t = 0; t < NTRACK; t++)
+        for (k = 0; k < 3u; k++)
+            auto_set(t, k, NO_AUTOMATION, 0);
+}
+
+/* ------------------------------------------------- main loop -> ISR --- */
+#define SNDQ 256u
+static uint16_t sndq[SNDQ];
+static volatile uint32_t sndq_w, sndq_r;
+static volatile uint8_t snd_all;                    /* refresh every sound parameter (a kit load) */
+static void snd_post(uint32_t p)
+{
+    if (sndq_w - sndq_r >= SNDQ) {
+        snd_all = 1;
+        return;
+    }
+    sndq[sndq_w % SNDQ] = (uint16_t)p;
+    RING_PUBLISH();
+    sndq_w++;
+}
+static void snd_post_all(void) { snd_all = 1; }
+/* 0.15: morph moved: the parameters it mixes (the kit's and the target's apart) refreshed a few at each block, as a
+ * sweep through the kit (SND_MSTEP each: 8 blocks, under 6 ms), not all in one block (that alone cost about a block
+ * of a busy kit's time: a global LFO on morph, every 8 ms, clicked). Moved again while one runs: another after it */
+#define SND_MSTEP 48u
+static volatile uint8_t snd_morph;                  /* (the main loop's: moved since the sweep began) */
+static uint16_t snd_mi;                             /* the sweep's next kit index, 0 = none running */
+static void snd_post_morph(void) { snd_morph = 1; }
+static void snd_morph_sweep(void)
+{
+    uint32_t n;
+    if (!snd_mi) {
+        if (!snd_morph)
+            return;
+        snd_morph = 0;
+        snd_mi = 1;
+    }
+    for (n = 0; n < SND_MSTEP && snd_mi < KIT_LEN; n++, snd_mi++) {
+        uint32_t p = kit_par(snd_mi);
+        if (par[p] != morph_par[snd_mi] && !morph_excluded(p) && par_base(p) != snd_mv[snd_mi])
+            snd_refresh(p);
+    }
+    if (snd_mi >= KIT_LEN)
+        snd_mi = 0;
+}
+
+static void seq_tempo_changed(void);               /* (seq.c) */
+static void snd_service(void)                       /* the audio ISR, at a block start */
+{
+    if (snd_all) {
+        uint32_t p;
+        snd_all = 0;
+        sndq_r = sndq_w;
+        snd_morph = 0;
+        snd_mi = 0;
+        for (p = 1; p < KIT_LEN; p++)
+            snd_refresh(kit_par(p));
+        return;
+    }
+    snd_morph_sweep();
+    while (sndq_r != sndq_w) {
+        uint32_t p;
+        RING_PUBLISH();
+        p = sndq[sndq_r % SNDQ];
+        sndq_r++;
+        if (par_sound(p))
+            snd_refresh(p);
+    }
+}
+
+/* the main loop's write: the edit buffer, then the sound (a sound parameter) */
+static void par_set(uint32_t p, uint32_t v)
+{
+    if (p >= NPAR)
+        return;
+    par[p] = (uint8_t)v;
+    if (par_sound(p))
+        snd_post(p);
+}

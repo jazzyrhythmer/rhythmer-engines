@@ -1,0 +1,878 @@
+/* SPDX-License-Identifier: GPL-3.0-only */
+/* Dinghy's platform: everything an FM-1 (or SMK-37) firmware needs before it can be fun, taken unchanged from
+ * SLOOP / Felucca / sloopDX / OberVave and wired up here. You should not need to touch this file.
+ *
+ *   boot + boot guard   a firmware that crashes at boot falls back to the USB rescue, then to the ROM
+ *   USB rescue          OCT- held at power-on: no audio, only the updater (the web installer still works)
+ *   updater             the M-UPGRADE SysEx path: the web installer / the hub can always reach the FM-1
+ *   MIDI                USB in and out, the FM-1's TRS jack in (midi_get: 1 USB, 2 TRS; midi_send); clock and
+ *                       transport (F8 FA FB FC) reach the app too
+ *   USB audio           the output as a class-compliant 16-bit stereo input, 44.1 or 48 kHz
+ *   keys, knobs, LEDs   fm1_in.notes / buttons, fm1_input_edges, fm1_enc_take, fm1_led_key, fm1_led_key_glow
+ *                       (hal/fm1_input.h; SMK-37: hal/smk_input.h, the same calls and velocity, pads, faders, wheels)
+ *   screen              240 x 240, lcd_fill, draw_text_box with FONT_S (16 px) / FONT_L (32 px) (gfx.c); LCD_IDLE
+ *   storage             settings, NBLOB blobs of one sector, NSLOT slots of SLOT_SECT sectors, each with a CRC (store.h)
+ *   crash screen        the PC of a fault, then a reboot
+ *
+ * The app (dinghy.c) includes this file first and supplies:
+ *   static void app_audio(int32_t *out, uint32_t n)   audio ISR: n stereo frames, L R L R, Q15 (+-32767), out is zero
+ *   static void app_main(void)                        never returns; calls platform_poll() often (every few ms)
+ * and may define, before the #include:
+ *   LCD_IDLE()        called while the screen's DMA sends a strip (the keys, MIDI: nothing waits for a redraw)
+ *   FELUCCA_UAC 0     no USB audio (MIDI only)
+ *   APP_EARLY()       (Frodhes) called once at boot, the interrupts off, before the audio and the timers start and the
+ *                     top of RAM is locked: what must start first (FR_C1: the second core, hal/fm1_core1.h)
+ */
+/* Frodhes: and APP_OUT_WRITTEN 1: app_audio writes every sample of out (then out is not cleared before it) */
+/* the panel by name: buttons (fm1_in.buttons, fm1_input_edges, fm1_led_key: bit / id), the encoders
+ * (fm1_enc_take); the 27 note keys are fm1_in.notes bit 0 (F3) .. 26 (G5), LED id 14 + key */
+#ifndef BOARD_SMK37
+#define BOARD_SMK37 0                           /* 1: the M-Vave SMK-37 (tools/build.py --board smk37; hal/fm1_cc.h) */
+#endif
+#if BOARD_SMK37
+/* the M-Vave SMK-37 (docs/SMK37.md): the FM-1's buttons on the SMK buttons that mean the same (the fm1-to-smk37 kit's
+ * printed-name map: PATCH = HOME, PARA = EDIT, CHORD = ENV, NOTE REPEAT = LFO, SCALE = SEL, GLOBE = GLO, BT = SAVE),
+ * the four extras; K1 is the MASTER pot (hal/smk_input.h), K2 SELECT, K3 ALGORITHM, K4 PRESETS, K5..K8 KNOB 1..4.
+ * The note keys have no LEDs here (the pads have colours: padled_set): KEY_LED ids are past the button LEDs and do nothing */
+enum { BTN_KNOB_BANK = 0, BTN_FADER_BANK = 1, BTN_LEFT = 2, BTN_RIGHT = 3, BTN_OCT_DOWN = 4, BTN_OCT_UP = 5,
+       BTN_ARP = 6, BTN_LFO = 7, BTN_SEL = 8, BTN_ENV = 9, BTN_GLO = 10, BTN_SAVE = 11, BTN_HOME = 12, BTN_EDIT = 13,
+       BTN_FX = 14, BTN_SEQ = 15, BTN_PLAY = 16, BTN_REC = 17 };
+enum { ENC_MASTER = 0, ENC_SELECT = 1, ENC_ALGORITHM = 2, ENC_PRESETS = 3, ENC_KNOB1 = 4, ENC_KNOB2 = 5, ENC_KNOB3 = 6,
+       ENC_KNOB4 = 7 };
+#define KEY_LED(k) (32u + (k))
+#else
+enum { BTN_OCT_DOWN = 0, BTN_OCT_UP = 1, BTN_FX = 2, BTN_SEL = 3, BTN_ENV = 4, BTN_LFO = 5, BTN_EDIT = 6,
+       BTN_GLO = 7, BTN_HOME = 8, BTN_SAVE = 9, BTN_ARP = 10, BTN_SEQ = 11, BTN_PLAY = 12, BTN_REC = 13 };
+enum { ENC_SELECT = 0, ENC_ALGORITHM = 1, ENC_KNOB1 = 2, ENC_KNOB2 = 3, ENC_KNOB3 = 4, ENC_KNOB4 = 5, ENC_PRESETS = 6 };
+#define KEY_LED(k) (14u + (k))
+#endif
+
+#ifdef DINGHY_HOST
+#ifdef DINGHY_WEB
+#include "../../web/web_hal.c"                 /* in a web browser (Emscripten): web/web_hal.c */
+#else
+#include "../../tests/host.c"                  /* on a computer: a fake FM-1 (tests/host.c) */
+#endif
+#else
+#include <stdint.h>
+#include "fm1_time.h"
+#include "fm1_sys.h"
+#include "fm1_irq.h"
+#include "fm1_guard.h"
+#if BOARD_SMK37
+#include "smk_input.h"                          /* keys with velocity, buttons, 8 encoders, LEDs, pads, faders, wheels */
+static void fm1_led_key_glow(uint32_t id, int on) { (void)id; (void)on; }   /* (no key LEDs: the pads glow) */
+#else
+#define FM1_SETTLE_US 100u                      /* the boot scan (OCT- for the rescue): 10 us read no key on an FM-1, the tick waits 100 too */
+#include "fm1_input.h"
+static void fm1_led_key_glow(uint32_t id, int on)   /* as fm1_led_key, the dim layer (~1/24): "there is something here" */
+{
+    uint32_t p, r;
+    for (p = 0; p < FM1_NCOL; p++)
+        for (r = 1; r < 5u; r++)
+            if (FM1_KEYMAP[r][p] == (int8_t)id) {
+                if (on) fm1_led_dim[p] |= (uint8_t)(1u << r);
+                else fm1_led_dim[p] &= (uint8_t)~(1u << r);
+            }
+}
+#endif
+#include "fm1_timer.h"
+#include "fm1_lcd_hw.h"
+#include "fm1_audio.h"
+#include "fm1_keep.h"                           /* (Frodhes: HAL_KEEP_REG, the audio ISR's tail) */
+#if !BOARD_SMK37
+#include "fm1_adc.h"                            /* (SMK: smk_input.h stands in, MASTER = K1) */
+#endif
+#include "bootguard.h"
+
+#ifndef APP_NAME
+#define APP_NAME "DINGHY"
+#endif
+#ifndef FELUCCA_ID
+#if BOARD_SMK37
+#define FELUCCA_ID SMK_MODEL "_990"             /* SMK-37 Pro_99N (Elite, MKE-P37: SMK_MODEL), tools/build.py */
+#else
+#define FELUCCA_ID "FM-1_990"                   /* package identity: 99N = Dinghy build N (tools/build.py) */
+#endif
+#endif
+#ifndef APP_VER
+#define APP_VER "0.0"
+#endif
+
+bootguard_t bootguard __attribute__((section(".noinit")));
+static volatile uint32_t fm1_ms;                /* milliseconds since power-on (TIMER5) */
+
+#define RING_PUBLISH() __asm__ volatile("" ::: "memory")
+#include "libc.c"
+#include "lcd.c"
+#ifndef CV_MAX
+#define CV_MAX (240u * 64u)                     /* the biggest text box drawn at once (canvas in RAM: 2 B a pixel) */
+#endif
+#include "gfx.c"
+
+#define FS 44100u                               /* the sample rate */
+#ifndef HALF_FRAMES                             /* (Frodhes: the app may set it, frodhes.c FR_LAT_HALF) */
+#define HALF_FRAMES 256u                        /* I2S half buffer: 5.8 ms (as sloopDX: the USB audio band is set for it) */
+#endif
+#define HALF_WORDS (HALF_FRAMES * 2u)
+#define FELUCCA_OTA 1
+#define FELUCCA_CDC 0
+#ifndef FELUCCA_UAC
+#define FELUCCA_UAC 1                           /* USB audio to the computer (0: MIDI only, as zp12) */
+#endif
+#ifndef FELUCCA_UAC_PHASE
+#define FELUCCA_UAC_PHASE 1                     /* Frodhes 0.9.9: the EP4 poll follows the host's IN token (usb.c
+                                                 * uac_tick; 0: the 2 kHz poll at a fixed phase, as before) */
+#endif
+#ifndef FELUCCA_UAC_ALIGN
+#define FELUCCA_UAC_ALIGN 1                     /* Frodhes 0.9.9: each flash slice right after a USB audio packet (usb.c
+                                                 * uac_slice_ok, fm1_flash.h FL_SLICE_OK; 0: at any moment, as before) */
+#endif
+#ifndef FELUCCA_UAC_LOCK
+#define FELUCCA_UAC_LOCK 1                      /* Frodhes 0.9.9 (iOS): the stream locked to the USB frame clock, the
+                                                 * FM-1's clock drift resampled out (usb.c uac_tap_lock; 0: as before) */
+#endif
+#if FELUCCA_UAC && FELUCCA_UAC_ALIGN
+#define UAC_STAMP() fm1_ticks()
+#define UAC_SLICE_WIN (200u * FM1_TICKS_PER_US)  /* a slice may start up to 200 us after the packet */
+#endif
+#define FELUCCA_UART (!BOARD_SMK37)             /* the FM-1's TRS MIDI IN (SMK-37: none, PH8 is a key-matrix row) */
+#if BOARD_SMK37 && FELUCCA_UART
+#error "BOARD_SMK37: no UART MIDI IN (RX on PH8, a key-matrix row on the SMK)"
+#endif
+#define MIDI_RX_STAMP() fm1_ms                  /* (Frodhes: usb.c / midi_uart.c stamp the MIDI clock's arrival) */
+#include "usb.c"
+#if FELUCCA_UART
+#include "midi_uart.c"                          /* (sloopDX's, after Felucca Salt: the ring read by content; cable 1) */
+#endif
+#if FELUCCA_UAC
+#define UAC_ONLY(x) x
+#else
+#define UAC_ONLY(x) ((void)0)
+#endif
+#ifndef APP_OUT_SHIFT                          /* the app may drive the codec to full scale (8) */
+#define APP_OUT_SHIFT 7u
+#endif
+
+/* ---- flash: read anywhere; erase / program only the update's staging area and the app's store (store.h; the app
+ * may give its own, tighter allow-list: APP_FL_RANGE) */
+#include "store.h"
+#if FELUCCA_UAC && FELUCCA_UAC_ALIGN && !defined(FL_SLICE_OK)
+#define FL_SLICE_OK() uac_slice_ok()
+#endif
+#include "fm1_flash.h"
+static uint8_t flash_ok;
+FR_COLD static int st_read(uint32_t off, void *dst, uint32_t n)
+{
+    uint8_t *d = dst;
+    while (n) {
+        uint32_t k = n > 256u ? 256u : n, f = irq_save();
+        int rc;
+        FL_XIP_OFF_WAIT();                      /* (fm1_flash.h: the app's word before the flash leaves XIP) */
+        rc = FL_FAR(fl_read_ram)(off, d, k);
+        irq_restore(f);
+        if (rc)
+            return rc;
+        off += k;
+        d += k;
+        n -= k;
+    }
+    return 0;
+}
+
+static uint8_t recovery_active;
+#if BOARD_SMK37
+#define OTA_IDENTITY (recovery_active ? SMK_MODEL "_000" : FELUCCA_ID)
+#else
+#define OTA_IDENTITY (recovery_active ? "FM-1_000" : FELUCCA_ID)
+#endif
+#ifdef FR_OTA_V15
+static uint32_t fr_ota_area = FR_OTA_V16;      /* (frodhes_store.h OTA_AREA: fr_ota_pick at power-on) */
+#endif
+#include "ota.c"
+static void recovery_poll(void);
+FR_COLD static uint32_t ota_now_ms(void) { return fm1_ms; }
+FR_COLD static void ota_idle(void)
+{
+    fm1_wdt_feed();
+    if (recovery_active) recovery_poll();
+}
+FR_COLD static int ota_in_area(uint32_t off, uint32_t n) { return FL_IN(off, n, OTA_AREA, OTA_AREA + OTA_AREA_LEN); }
+FR_COLD static int ota_erase(uint32_t off)
+{
+    uint32_t took;
+    if (!ota_in_area(off, 0x1000u) || (off & 0xFFFu))
+        return -8;
+    return fl_erase4k(off, &took);
+}
+FR_COLD static int ota_prog(uint32_t off, const void *p, uint32_t n)
+{
+    if (!ota_in_area(off, n))
+        return -8;
+    return fl_write(off, p, n);
+}
+FR_COLD static int ota_fread(uint32_t off, void *p, uint32_t n) { return st_read(off, p, n); }
+FR_COLD static void ota_show(uint32_t step, int32_t code)
+{
+#if BOARD_SMK37   /* step 5 stays on screen while the loader writes the flash: say so */
+    static const char *const STEP[] = {"", "PACKAGE", "CHECK HEAD", "LOADER", "CONFIRM", "UPDATING..."};
+#else
+    static const char *const STEP[] = {"", "PACKAGE", "CHECK HEAD", "LOADER", "CONFIRM", "RESTART"};
+#endif
+    if (recovery_active) return;
+    lcd_fill(0, 0, 240, 240, C_BLACK);
+    draw_text_box(0, 92, 240, &FONT_S, "UPDATE", C_WHITE, 1);
+    if (step < 9u)
+        draw_text_box(0, 124, 240, &FONT_S, STEP[step < 6u ? step : 0], C_WHITE, 1);
+    else
+        draw_text_box(0, 124, 240, &FONT_S, code == 1 ? "DRY RUN OK" : "FAILED", C_WHITE, 1);
+}
+FR_COLD static void ota_commit(const uint8_t *parm)
+{
+    bootguard_clear(&bootguard);
+    usb_detach();
+    fm1_delay_ms(30);
+    fm1_enter_update(parm);
+}
+#include "recovery.c"
+
+/* ---- storage: [magic][length][crc32] then the bytes. A save erases (~50 ms a sector with the interrupts off:
+ * the sound drops out), so save when nothing plays, not on every knob step. Each sector wears out after ~100,000 */
+static uint32_t crc32(const uint8_t *p, uint32_t n)
+{
+    uint32_t c = 0xFFFFFFFFu, k;
+    while (n--) {
+        c ^= *p++;
+        for (k = 0; k < 8u; k++)
+            c = c & 1u ? (c >> 1) ^ 0xEDB88320u : c >> 1;
+    }
+    return ~c;
+}
+static int area_load(uint32_t at, uint32_t max, uint32_t magic, void *p, uint32_t n)   /* reads straight into p */
+{
+    uint32_t h[3];
+    if (!flash_ok || n > max || st_read(at, h, sizeof h) || h[0] != magic || h[1] != n || st_read(at + sizeof h, p, n))
+        return -1;
+    return crc32(p, n) == h[2] ? 0 : -1;
+}
+FR_COLD static int area_save(uint32_t at, uint32_t sectors, uint32_t magic, const void *p, uint32_t n)   /* p in RAM */
+{
+    uint32_t h[3] = {magic, n, 0}, k, took;
+    int rc;
+    if (!flash_ok || n > sectors * 0x1000u - sizeof h)
+        return -1;
+    h[2] = crc32(p, n);
+    for (k = 0; k < sectors; k++) {
+        fm1_wdt_feed();                         /* (~50 ms an erase) */
+        if ((rc = fl_erase4k(at + k * 0x1000u, &took)) != 0)
+            return rc;
+    }
+    if ((rc = fl_write(at + sizeof h, p, n)) != 0)
+        return rc;
+    return fl_write(at, (const uint8_t *)h, sizeof h);   /* the header last: a cut save stays invalid */
+}
+/* one sector each, up to SECTOR_MAX bytes; 0: done. A load that fails leaves p as it was (a copy first) */
+static int sector_load(uint32_t at, void *p, uint32_t n)
+{
+    static uint8_t buf[SECTOR_MAX];
+    if (n > sizeof buf || area_load(at, SECTOR_MAX, STORE_MAGIC, buf, n))
+        return -1;
+    memcpy(p, buf, n);
+    return 0;
+}
+#include "set_store.c"                          /* (Frodhes: the settings in two sectors, A / B: settings_load,
+                                                 * settings_save_start / _poll, settings_save) */
+FR_COLD static int blob_load(uint32_t i, void *p, uint32_t n) { return i < NBLOB ? sector_load(BLOBS_AT + i * 0x1000u, p, n) : -1; }
+FR_COLD static int blob_save(uint32_t i, const void *p, uint32_t n) { return i < NBLOB ? area_save(BLOBS_AT + i * 0x1000u, 1u, STORE_MAGIC, p, n) : -1; }
+/* slot i: SLOT_SECT sectors, up to SLOT_MAX bytes. slot_load reads straight into p (no buffer that big): on -1 p holds
+ * rubbish, start afresh */
+#define SLOT_MAGIC 0x544F4C53u                  /* "SLOT" */
+FR_COLD static int slot_load(uint32_t i, void *p, uint32_t n) { return i < NSLOT ? area_load(SLOTS_AT + i * SLOT_SECT * 0x1000u, SLOT_MAX, SLOT_MAGIC ^ STORE_MAGIC, p, n) : -1; }
+FR_COLD static int slot_save(uint32_t i, const void *p, uint32_t n) { return i < NSLOT ? area_save(SLOTS_AT + i * SLOT_SECT * 0x1000u, SLOT_SECT, SLOT_MAGIC ^ STORE_MAGIC, p, n) : -1; }
+#if BOARD_SMK37
+static uint8_t smk_store_cleared, smk_trim_ok;   /* (the panel check shows them) */
+static uint32_t smk_jedec;
+#ifndef OLD_OWNER_AT                            /* (Frodhes 0.9.6: no owner clear, nothing of the stock VM written) */
+/* the store's owner (the kit's convention, store.h): our tag, load as ever; anything else (the stock settings,
+ * another port's data) is cleared once and the tag written, before the audio starts */
+FR_COLD static void smk_owner_check(void)
+{
+    uint8_t tag[16], want[16];
+    uint32_t i, ours = 1, took;
+    if (!flash_ok)
+        return;
+    smk_owner_tag(want);
+    if (st_read(OWNER_AT, tag, 16))
+        return;
+    for (i = 0; i < 16u; i++)
+        ours &= tag[i] == want[i];
+    if (ours)
+        return;
+    fl_erase4k(SETTINGS_AT, &took);
+    for (i = 0; i < NBLOB; i++) {
+        fm1_wdt_feed();                         /* (~50 ms an erase) */
+        fl_erase4k(BLOBS_AT + i * 0x1000u, &took);
+    }
+    for (i = 0; i < NSLOT; i++) {               /* (each slot's head; another firmware's samples go) */
+        fm1_wdt_feed();
+        fl_erase4k(SLOTS_AT + i * SLOT_SECT * 0x1000u, &took);
+    }
+    fl_erase4k(OWNER_AT, &took);
+    fl_write(OWNER_AT, want, 16);
+    smk_store_cleared = 1;
+}
+#else
+static int smk_old_ours(void)                   /* the data before 0.9.6 in the stock VM is ours (its owner tag): the
+                                                 * migration reads it (frodhes.c); else it is the stock's, never read */
+{
+    uint8_t tag[16], want[16];
+    smk_owner_tag(want);
+    return flash_ok && !st_read(OLD_OWNER_AT, tag, 16) && !memcmp(tag, want, 16);
+}
+#endif
+/* the factory key / pad velocity curves (USRTRIM 0xC1000, read only; smk_input.h checks them, else its defaults) */
+FR_COLD static void smk_trim_read(void)
+{
+    static uint8_t rec[0x22Cu];
+    if (flash_ok && !st_read(SMK_TRIM_FLASH, rec, sizeof rec))
+        smk_trim_ok = (uint8_t)smk_trim_load(rec);
+}
+#endif
+
+/* ---- MIDI: USB and the TRS jack share one ring of 4-byte USB-MIDI packets (USB cable 0, the jack cable 1) */
+static int midi_get(uint8_t *st, uint8_t *d1, uint8_t *d2)   /* 1 (USB) or 2 (TRS): a message; 0: none */
+{
+    uint32_t pk;
+    if (mi_r == mi_w)
+        return 0;
+    pk = midi_in_q[mi_r % MQ];
+    mi_r++;
+    *st = (uint8_t)(pk >> 8);
+    *d1 = (uint8_t)(pk >> 16);
+    *d2 = (uint8_t)(pk >> 24);
+    return pk & 0xF0u ? 2 : 1;
+}
+FR_COLD static void midi_send(uint32_t st, uint32_t d1, uint32_t d2)   /* USB out, from the main loop only; F8 FA FB FC too */
+{
+    midi_out_event((st >> 4) | st << 8 | (d1 & 0x7Fu) << 16 | (d2 & 0x7Fu) << 24);
+}
+
+/* ---- the timer: 10 kHz key scan, milliseconds, USB at 2 kHz. It outranks the audio ISR; nested in a
+ * render it only scans, counts and feeds the USB audio stream (as sloopDX main.c) */
+static volatile uint8_t in_audio;
+#ifdef FM1_PROF_TICK
+/* Frodhes, developer build only (APP_DEFS=-DFM1_PROF_TICK ./build.sh; never shipped): the timer tick's own time (its C
+ * body, entry .. return: the scan, the ms count, the USB / TRS polls; not the register save of hal/fm1_isr.S) and how
+ * much of it lands in each audio block (the ticks nested in the audio ISR: the render's real cost includes them).
+ * In 24 MHz ticks; the CC 116 query answers them (tick_prof_reply, items 13..16) and they restart. */
+static struct { uint32_t max, sum, n, blk, blk_max, blk_sum, blk_n; } tick_st __attribute__((section(".bss.tick_st")));
+static void tick_prof(uint32_t t0)
+{
+    uint32_t d = fm1_ticks() - t0;
+    if (d > tick_st.max) tick_st.max = d;
+    tick_st.sum += d;
+    tick_st.n++;
+    if (in_audio) tick_st.blk += d;
+}
+static void tick_prof_block(void)              /* the audio ISR's end: this block's tick time */
+{
+    uint32_t b = tick_st.blk;
+    tick_st.blk = 0;
+    if (b > tick_st.blk_max) tick_st.blk_max = b;
+    tick_st.blk_sum += b;
+    tick_st.blk_n++;
+}
+static void tick_prof_item(uint32_t id, uint32_t v)
+{
+    if (v > 16383u) v = 16383u;
+    midi_send(0xB0, 100, id); midi_send(0xB0, 101, v >> 7); midi_send(0xB0, 102, v & 127u);
+}
+/* main loop (the CC 116 reply): CC 100 id / 101-102 value, 13 the longest tick (1/24 us), 14 the most tick time in one
+ * audio block (us), 15 the mean tick time per audio block (1/4 us), 16 the mean tick (1/24 us); then they restart */
+static void tick_prof_reply(void)
+{
+    uint32_t mx = tick_st.max, sum = tick_st.sum, n = tick_st.n, bmx = tick_st.blk_max, bs = tick_st.blk_sum;
+    uint32_t bn = tick_st.blk_n;
+    tick_st.max = tick_st.sum = tick_st.n = tick_st.blk_max = tick_st.blk_sum = tick_st.blk_n = 0;
+    tick_prof_item(13, mx);
+    tick_prof_item(14, bmx / 24u);
+    tick_prof_item(15, bn ? bs / (6u * bn) : 0u);
+    tick_prof_item(16, n ? sum / n : 0u);
+}
+void timer5_run(void);
+#define fm1_timer5_irq timer5_run              /* (the body below; the wrapper after it times it) */
+#endif
+void fm1_timer5_irq(void)
+{
+    static uint32_t sub, owed, last, acc;       /* (Frodhes: sub counts 0..4, the phase of the 2 kHz polls; no divide) */
+    uint32_t t0 = fm1_ticks(), usb_due = sub == 0u;
+    fm1_timer5_ack();
+    fm1_input_tick();
+#if FELUCCA_UAC_PHASE
+    {   /* (usb.c uac_tick: the ticks since the last one; an interrupts-off stretch folds several into this one) */
+        uint32_t dt = t0 - last, n = 1;
+        while (dt >= 200u * FM1_TICKS_PER_US && n < 20u) {   /* (only after a stretch) */
+            dt -= 100u * FM1_TICKS_PER_US;
+            n++;
+        }
+        uac_tick(n);
+    }
+#endif
+    acc += t0 - last;
+    last = t0;
+    while (acc >= 1000u * FM1_TICKS_PER_US) {
+        acc -= 1000u * FM1_TICKS_PER_US;
+        fm1_ms++;
+    }
+    if (usb_due)
+        owed |= 1u;
+#if FELUCCA_UART
+    if (sub == 2u)
+        owed |= 2u;                             /* 2 kHz: <= ~7 bytes per call at 31250 baud */
+#endif
+    if (++sub == 5u)
+        sub = 0;
+#if !FELUCCA_UAC                                /* MIDI only: the USB poll keeps its 2 kHz, nested in a render too (as zp12,
+                                                   whose MIDI out works on the device) */
+    if (usb_due)
+        usb_poll();
+#if FELUCCA_UART
+    if (owed & 2u)
+        uart_midi_tick();
+#endif
+    owed = 0;
+    return;
+#endif
+#if FELUCCA_UAC_PHASE
+    if (in_audio)
+        return;                                 /* (EP4: uac_tick above, every tick) */
+#else
+    if (in_audio) {
+        if (usb_due)
+            UAC_ONLY(uac_service());
+        return;
+    }
+#endif
+    if (owed & 1u)
+        usb_poll();
+#if FELUCCA_UART
+    if (owed & 2u)
+        uart_midi_tick();
+#endif
+    owed = 0;
+}
+#ifdef FM1_PROF_TICK
+#undef fm1_timer5_irq
+void fm1_timer5_irq(void)
+{
+    uint32_t t0 = fm1_ticks();
+    timer5_run();
+    tick_prof(t0);
+}
+#endif
+extern void isr_timer5(void);
+
+/* ---- the sound: ALNK0 I2S, two halves; the app renders, the MASTER knob scales, Q15 -> 24 bit (-6 dBFS ceiling) */
+static int32_t abuf[2u * HALF_WORDS] __attribute__((aligned(4)));
+static volatile int32_t master_q12 = 2048;
+static int32_t tap_q[64] __attribute__((section(".bss.tap_q")));   /* Frodhes: 32 frames for the USB tap (Q15) */
+#if FELUCCA_UAC && FELUCCA_UAC_LOCK == 1
+/* Frodhes (0.9.9, the 48 kHz tail): the block's USB samples straight into the locked resampler's history (usb.c
+ * uac_tap_hist), one tap after the block; master_ramp keeps tap_q and its pieces. Otherwise tap_q, a tap per 32 */
+#define TAIL_Q_T int16_t
+#define TAIL_Q(b) (UAC_HIST + (b))
+#define TAIL_TAP(q) ((void)0)
+#define TAIL_TAP_BLOCK() uac_tap_hist(HALF_FRAMES)
+#define TAIL_KEEP(q) HAL_KEEP_REG(q)            /* (in the loop: a moving pointer, not an index from the block) */
+#else
+#define TAIL_Q_T int32_t
+#define TAIL_Q(b) tap_q
+#define TAIL_TAP(q) UAC_ONLY(uac_tap((q) - 64, 32u))
+#define TAIL_TAP_BLOCK() ((void)0)
+#define TAIL_KEEP(q) ((void)0)
+#endif
+static volatile uint8_t usb_pre_master;        /* the app: 1 = the USB audio does not follow the MASTER knob */
+static void app_audio(int32_t *out, uint32_t n);
+static void app_main(void);
+
+/* Frodhes: the whole audio ISR's time (entry .. fm1_audio_ack_half: the render, the MASTER pass, the USB tap and the
+ * 48 kHz resampler), the tail after app_audio, the spacing of the ISR entries (a late entry shows as one long and
+ * one short period: TIMER5 outranks the audio ISR) and the USB ring's true low point (its fill just before the
+ * block is tapped in). Maxima / minima since the app's last read (frodhes.c CC 116); own sections. */
+static struct { uint32_t t_prev, max_us, tail_us, per_min, per_max, fill_low; } isr_st
+    __attribute__((section(".bss.isr_st")));
+static __attribute__((noinline)) void isr_stats(uint32_t t0, uint32_t t1, uint32_t fill)
+{
+    uint32_t t2 = fm1_ticks(), us = (t2 - t0) / FM1_TICKS_PER_US, tail = (t2 - t1) / FM1_TICKS_PER_US;
+    uint32_t per = (t0 - isr_st.t_prev) / FM1_TICKS_PER_US;
+    if (isr_st.t_prev) {
+        if (!isr_st.per_min || per < isr_st.per_min) isr_st.per_min = per;
+        if (per > isr_st.per_max) isr_st.per_max = per;
+    }
+    isr_st.t_prev = t0;
+    if (us > isr_st.max_us) isr_st.max_us = us;
+    if (tail > isr_st.tail_us) isr_st.tail_us = tail;
+    if (fill && (!isr_st.fill_low || fill < isr_st.fill_low)) isr_st.fill_low = fill;   /* fill + 1; 0 = no stream */
+}
+
+/* Frodhes: the block's MASTER pass with the gain ramping from master_prev to m (the loops below, a gain a frame) */
+static int32_t master_prev = -1;
+/* Frodhes (0.9.7, #8): the jack after MASTER keeps the product's low bits (x * g >> (12 - APP_OUT_SHIFT)) instead of
+ * cutting it to 16 bits first ((x * g >> 12) << APP_OUT_SHIFT: a -95 dBFS error with a DC part under the codec's
+ * floor); the clamp at the same ceiling, 32767 << APP_OUT_SHIFT. No overflow: |x| <= 32767 (or the app's sample, as
+ * before), g <= 4096. The USB tap's samples are the 16-bit ones, unchanged */
+#define MASTER_JACK_SH (12 - (int32_t)APP_OUT_SHIFT)
+#define TAIL_JACK(x) ((x) > (32767 << APP_OUT_SHIFT) ? (32767 << APP_OUT_SHIFT) : \
+                      (x) < -(32767 << APP_OUT_SHIFT) ? -(32767 << APP_OUT_SHIFT) : (x))
+_Static_assert(APP_OUT_SHIFT <= 12u, "the jack: MASTER's Q12 product shifted right by 12 - APP_OUT_SHIFT");
+#define TAIL_PRE(x) ((x) > 32767 ? 32767 : (x) < -32767 ? -32767 : (x))
+static __attribute__((noinline)) void master_ramp(int32_t *o, int32_t m)
+{
+    int32_t mq = (master_prev < 0 ? m : master_prev) << 8, dm = master_prev < 0 ? 0 : m - master_prev, b, i;
+    for (b = 0; b < (int32_t)HALF_WORDS; b += 64) {
+        int32_t *c = o + b, *q = tap_q;
+        HAL_KEEP_REG(q);
+        for (i = 0; i < 32; i++, c += 2, q += 2) {
+            int32_t g, k, x;
+            mq += dm; g = mq >> 8;
+            for (k = 0; k < 2; k++) {           /* (both channels, either order of the gain and the clip below) */
+                int32_t p;
+                x = c[k];
+                if (usb_pre_master) {
+                    x = TAIL_PRE(x);
+                    q[k] = x;
+                    c[k] = (x * g) >> MASTER_JACK_SH;
+                } else {
+                    p = x * g;
+                    x = p >> 12;
+                    q[k] = TAIL_PRE(x);
+                    c[k] = TAIL_JACK(p >> MASTER_JACK_SH);
+                }
+            }
+        }
+        UAC_ONLY(uac_tap(q - 64, 32u));
+    }
+    master_prev = m;
+}
+#undef TAIL_PRE
+#ifndef APP_TAIL_EARLY
+#define APP_TAIL_EARLY 0
+#endif
+#if APP_TAIL_EARLY
+/* Frodhes (0.9.10, two cores: APP_TAIL_EARLY): the tail below in pieces of 32 frames, the first ones run early by the
+ * app (tail_early, still in this interrupt: frodhes.c app_audio, while core 0 waits for core 1's last effects) on
+ * the frames already final; the interrupt does the rest after app_audio. The same samples as the one pass: MASTER
+ * and the clip act frame by frame, the USB tap in pieces of 32 is the one tap (tests/uac_rs_test.c, bit for bit).
+ * Allowed (tl.on) only when nothing can tell the pieces from the pass: MASTER not moving (master_ramp: the whole
+ * pass after), the USB ring with room for the whole block (else the one tap drops it all, a piece only its part) */
+static struct { int32_t *o; int32_t m; uint32_t b, fill, on; } tl __attribute__((section(".bss.tail_tl")));
+#if FELUCCA_UAC
+#define TAIL_ROOM() (!uac.feed || UA_N - (ua_w - ua_r) >= HALF_FRAMES + HALF_FRAMES / 8u + 2u)
+#define TAIL_FILL() (uac.feed && uac.go ? ua_w - ua_r + 1u : 0u)
+#else
+#define TAIL_ROOM() 1
+#define TAIL_FILL() 0u
+#endif
+#if FELUCCA_UAC && FELUCCA_UAC_LOCK == 1
+#define TAIL_PQ() UAC_HIST                      /* (a piece: its frames at the history's start, then a tap of 32) */
+#define TAIL_PTAP(q) uac_tap_hist(32u)
+#else
+#define TAIL_PQ() tap_q
+#define TAIL_PTAP(q) TAIL_TAP(q)
+#endif
+static __attribute__((noinline)) void tail_piece(int32_t *c, int32_t m)   /* 32 frames: the loop below, one pass */
+{
+#define TAIL_PRE(x) ((x) > 32767 ? 32767 : (x) < -32767 ? -32767 : (x))
+    TAIL_Q_T *q = TAIL_PQ();
+    uint32_t i;
+    HAL_KEEP_REG(q);
+    if (usb_pre_master) {
+        for (i = 0; i < 32u; i++, c += 2, q += 2) {
+            int32_t l = TAIL_PRE(c[0]), r = TAIL_PRE(c[1]);
+            TAIL_KEEP(q);
+            q[0] = (TAIL_Q_T)l; q[1] = (TAIL_Q_T)r;
+            c[0] = (l * m) >> MASTER_JACK_SH;
+            c[1] = (r * m) >> MASTER_JACK_SH;
+        }
+    } else {
+        for (i = 0; i < 32u; i++, c += 2, q += 2) {
+            int32_t pl = c[0] * m, pr = c[1] * m, l = pl >> 12, r = pr >> 12;
+            l = TAIL_PRE(l); r = TAIL_PRE(r);
+            TAIL_KEEP(q);
+            q[0] = (TAIL_Q_T)l; q[1] = (TAIL_Q_T)r;
+            pl >>= MASTER_JACK_SH; pr >>= MASTER_JACK_SH;
+            c[0] = TAIL_JACK(pl);
+            c[1] = TAIL_JACK(pr);
+        }
+    }
+    TAIL_PTAP(q);
+#undef TAIL_PRE
+}
+static void tail_early(uint32_t frames)         /* the app: frames 0 .. frames - 1 of the block are final */
+{
+    if (!tl.on || frames > HALF_FRAMES) return;
+    if (!tl.b) tl.fill = TAIL_FILL();          /* (the ring's low point, before a tap) */
+    while (tl.b < 2u * frames) { tail_piece(tl.o + tl.b, tl.m); tl.b += 64u; }
+}
+#endif
+static volatile uint32_t wd_isr_n;              /* the watchdog's proof the audio interrupt runs */
+void fm1_alnk0_irq(void)                       /* via isr_alnk0 (hal/fm1_isr.S) */
+{
+    wd_isr_n = wd_isr_n + 1u;
+    uint8_t p;
+    uint32_t t0 = fm1_ticks();
+    in_audio = 1;
+    p = fm1_audio_pending();
+    fm1_audio_ack_aux(p);
+    if (p & FM1_AUDIO_HALF) {
+        int32_t *o = &abuf[fm1_audio_free_half() * HALF_WORDS];
+        uint32_t i, b, ramp;
+        int32_t m;
+#if !APP_OUT_WRITTEN
+        for (i = 0; i < HALF_WORDS; i++)
+            o[i] = 0;
+#endif
+        uint32_t t1, fill;
+        UAC_ONLY(uac_render_start());
+#if APP_TAIL_EARLY
+        tl.o = o; tl.b = 0; tl.m = master_q12;  /* (only the main loop writes MASTER: the value read after app_audio) */
+        tl.on = tl.m == master_prev && TAIL_ROOM();
+#endif
+        app_audio(o, HALF_FRAMES);
+        t1 = fm1_ticks();
+        fill = uac.feed && uac.go ? ua_w - ua_r + 1u : 0u;   /* the ring's low point: the render ran it down */
+#if APP_TAIL_EARLY
+        if (tl.b) {                             /* pieces run early: the rest in pieces, the same samples */
+            fill = tl.fill;
+            for (b = tl.b; b < HALF_WORDS; b += 64u)
+                tail_piece(o + b, tl.m);
+            tl.on = 0;
+            goto tail_done;
+        }
+        tl.on = 0;
+#endif
+        /* Frodhes: one pass per 32 frames (MASTER, the clip, the codec's shift; the USB tap's samples into tap_q) instead
+         * of three over the block; the same samples. MASTER read once: only the main loop writes it */
+        m = master_q12;
+#define TAIL_PRE(x) ((x) > 32767 ? 32767 : (x) < -32767 ? -32767 : (x))
+        if (m != master_prev) {                 /* Frodhes (0.9.6, BUGHUNT #20: a new MASTER stepped once a block, a
+                                                 * 2.4x zipper while the knob turns): the gain ramps from the last
+                                                 * block's, frame by frame (Q8: (m - prev) a frame reaches m exactly) */
+            master_ramp(o, m);
+            b = HALF_WORDS;
+        } else b = 0;
+        ramp = b != 0;
+        for (; b < HALF_WORDS; b += 64u) {
+            int32_t *c = o + b;
+            TAIL_Q_T *q = TAIL_Q(b);
+            HAL_KEEP_REG(q);                    /* (an opaque pointer: else the compiler specialises uac_tap48 on
+                                                 * tap_q and its per-frame loop gets 7 instructions longer) */
+            if (usb_pre_master) {               /* the computer records the app at full level, the jack follows MASTER */
+                for (i = 0; i < 32u; i++, c += 2, q += 2) {
+                    int32_t l = TAIL_PRE(c[0]), r = TAIL_PRE(c[1]);
+                    TAIL_KEEP(q);
+                    q[0] = (TAIL_Q_T)l; q[1] = (TAIL_Q_T)r;
+                    c[0] = (l * m) >> MASTER_JACK_SH;   /* (0.9.7, #8: 24 bits on the jack) */
+                    c[1] = (r * m) >> MASTER_JACK_SH;
+                }
+            } else {                            /* the computer records what the speaker plays */
+                for (i = 0; i < 32u; i++, c += 2, q += 2) {
+                    int32_t pl = c[0] * m, pr = c[1] * m, l = pl >> 12, r = pr >> 12;
+                    l = TAIL_PRE(l); r = TAIL_PRE(r);
+                    TAIL_KEEP(q);
+                    q[0] = (TAIL_Q_T)l; q[1] = (TAIL_Q_T)r;
+                    /* Q15 x Q12 -> 24 bit: APP_OUT_SHIFT 7 = a -6 dBFS ceiling (Dinghy), 8 = full scale; 0.9.7 (#8):
+                     * the product's low bits kept on the jack, clamped at the same ceiling */
+                    pl >>= MASTER_JACK_SH; pr >>= MASTER_JACK_SH;
+                    c[0] = TAIL_JACK(pl);
+                    c[1] = TAIL_JACK(pr);
+                }
+            }
+            TAIL_TAP(q);
+        }
+        if (!ramp)
+            TAIL_TAP_BLOCK();
+#undef TAIL_PRE
+#if APP_TAIL_EARLY
+    tail_done:
+#endif
+        fm1_audio_ack_half();
+        isr_stats(t0, t1, fill);
+#ifdef FM1_PROF_TICK
+        tick_prof_block();
+#endif
+    }
+    in_audio = 0;
+}
+extern void isr_alnk0(void);
+
+/* ---- the main loop's duties: watchdog, USB, the installer's update request, the MASTER knob */
+/* the watchdog is fed only while the whole app runs: the main loop (this call), the audio interrupt (its count moved
+ * in the last WD_STALL), the clock (fm1_ticks moved within WD_SPIN passes) and what the app adds (APP_WD_OK: core 1's
+ * jobs). A stall of any of them stops the feeding and the watchdog resets the chip (0x0D: about 8 s) */
+#define WD_STALL (3000000u * FM1_TICKS_PER_US)
+#define WD_SPIN 2000000u
+#ifndef APP_WD_OK
+#define APP_WD_OK(now) 1
+#endif
+FR_COLD static void wd_poll(void)
+{
+    static uint32_t isr, isr_t, tk, spin, init;
+    uint32_t now = fm1_ticks(), n = wd_isr_n;
+    if (!init) { init = 1; isr = n; isr_t = tk = now; }
+    if (now != tk) tk = now, spin = 0;
+    else if (spin < WD_SPIN) spin++;
+    if (n != isr) isr = n, isr_t = now;
+    if (spin < WD_SPIN && now - isr_t < WD_STALL && APP_WD_OK(now))
+        fm1_wdt_feed();
+}
+FR_COLD static void platform_poll(void)
+{
+    static int32_t knob_avg = 512 * 16;
+    int32_t a;
+    wd_poll();
+#if defined(UAC_FAULT_CLI_US) && FELUCCA_UAC
+    {   /* developer builds only (APP_DEFS=-DUAC_FAULT_CLI_US=N): while the USB audio stream flows, the interrupts off
+         * for N us every ~50 ms (N 0: 300, 400 .. 900 us in turn), a flash slice's shape, for the EP4 poll's device
+         * A/B (FELUCCA_UAC_PHASE 0 / 1: CC 116's missed) */
+        static uint32_t t_last, k;
+        if (uac.flowing && fm1_ms - t_last >= 50u) {
+            uint32_t n = UAC_FAULT_CLI_US ? UAC_FAULT_CLI_US : 300u + 100u * (k++ % 7u), t0;
+            t_last = fm1_ms;
+            fm1_irq_off();
+            t0 = fm1_ticks();
+            while (fm1_ticks() - t0 < n * FM1_TICKS_PER_US)
+                ;
+            fm1_irq_on();
+        }
+    }
+#endif
+    usb_retry(fm1_ms);
+    ota_service();
+    if (usb.ota_req) {
+        usb.ota_req = 0;
+        if (flash_ok)
+            ota_session();                      /* returns only if nothing was committed */
+    }
+    if (usb.uboot_req) {
+        fm1_audio_stop();
+        lcd_fill(0, 0, 240, 240, C_BLACK);
+        draw_text_box(0, 110, 240, &FONT_S, "UBOOT (USB)", C_WHITE, 1);
+        usb_detach();
+        fm1_delay_ms(30);
+        bootguard.pending = 0;
+        fm1_enter_uboot();
+    }
+    if (fm1_ms >= 30000u && bootguard.pending)
+        bootguard_clear(&bootguard);            /* 30 s up: this firmware boots */
+    if ((a = fm1_adc_read(FM1_ADC_MASTER)) >= 0) {
+        /* heavily smoothed (a headphone plug makes the pot's reading jump about) and with a dead band of 6 / 1023,
+         * so the volume moves only when the knob does */
+        static uint32_t k_used = 512;
+        uint32_t k10;
+        knob_avg += (a * 16 - knob_avg) / 64;
+        k10 = (uint32_t)(knob_avg / 16);
+        if (k10 + 6u < k_used || k10 > k_used + 6u || (k10 == 0u) != (k_used == 0u) || (k10 >= 1020u) != (k_used >= 1020u)) {
+            k_used = k10;
+            master_q12 = (int32_t)((k10 * k10) >> 8);
+        }
+    }
+}
+
+FR_COLD static void fm1_fault(const fm1_crash_t *c)
+{
+    char b[12];
+    uint32_t i, t0, v[3] = {c->vec, c->pc, c->rets};
+    fm1_audio_stop();
+    lcd_fill(0, 0, 240, 240, RGB(160, 0, 0));
+    draw_text_box(0, 20, 240, &FONT_S, APP_NAME " CRASH", C_WHITE, 1);
+    for (i = 0; i < 3u; i++) {
+        uint32_t k;
+        for (k = 0; k < 8u; k++) b[k] = "0123456789ABCDEF"[(v[i] >> (28u - 4u * k)) & 15u];
+        b[8] = 0;
+        draw_text_box(10, 60 + i * 20, 220, &FONT_S, b, C_WHITE, 0);
+    }
+    t0 = fm1_ticks();
+    for (i = 0; (uint32_t)(fm1_ticks() - t0) < 8000u * 1000u * FM1_TICKS_PER_US && i < 20000000u; i++)
+        fm1_wdt_feed();                         /* (bounded by a count too: a stopped clock must not feed forever) */
+    fm1_reboot();
+    for (;;)                                    /* (no feeding: the watchdog resets if the reboot did not) */
+        ;
+}
+
+void fm1_cstart(void)
+{
+    extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
+    extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
+    uint32_t *s, *d, p3, boot_mode;
+    fm1_time_init();
+    fm1_reset_reason();
+    p3 = fm1_boot.p3_rst;
+    fm1_wdt_arm(0x0D);
+    if ((p3 & 1u) && !(p3 & (4u | 0x40u)))
+        bootguard_clear(&bootguard);
+    boot_mode = bootguard_begin(&bootguard);
+    if (boot_mode == BOOT_ROM)
+        fm1_enter_uboot();
+    fm1_irq_init();
+    for (d = _bss_start; d < _bss_end; d++) *d = 0;
+    for (d = _pool_start; d < _pool_end; d++) *d = 0;
+    for (s = _data_load, d = _data_start; d < _data_end; s++, d++) *d = *s;
+    for (s = _rt_load, d = _rt_start; d < _rt_end; s++, d++) *d = *s;
+    fm1_mailbox_clear();
+    fm1_guard_enable(FM1_GUARD_STACK | FM1_GUARD_WRITE | FM1_GUARD_BUS | FM1_GUARD_PC);
+    fm1_boot.p3_rst = (uint8_t)p3;
+    if (boot_mode == BOOT_RECOVERY || recovery_key())
+        recovery_main();                        /* OCT- at power-on: the USB rescue */
+#if BOARD_SMK37
+    smk_jedec = FL_FAR(fl_jedec_ram)();         /* (the panel check shows it: units may carry another part) */
+    flash_ok = FL_JEDEC_OK(smk_jedec);
+#else
+    flash_ok = FL_JEDEC_OK(FL_FAR(fl_jedec_ram)());
+#endif
+#ifdef FR_OTA_V15
+    {                                           /* Frodhes, the FM-1: the update staging where the stock firmware this
+                                                 * unit came from has no data. V15's VM (its settings store) starts
+                                                 * 55 AA AA 55 at 0x93000: stage at its end, 0xE0000 (as Felucca and
+                                                 * 0.9.5), and erase only a record left there, never the stock data the
+                                                 * sectors may hold; else (V16: its image's end at 0x93000) in the gap
+                                                 * 0xA9000..0xADFFF, which no region of V16's covers */
+        uint8_t m[8];
+        uint32_t i, rec = 0;
+        if (flash_ok && !st_read(0x93000u, m, 4) && m[0] == 0x55u && m[1] == 0xAAu && m[2] == 0xAAu && m[3] == 0x55u) {
+            fr_ota_area = FR_OTA_V15;
+            if (!st_read(OTA_RES, m, 8))
+                for (i = 0; i < 8u; i++) rec |= m[i] != 0xFFu;
+            if (rec) ota_unstage();
+        } else
+            ota_boot_cleanup();
+    }
+#else
+    ota_boot_cleanup();
+#endif
+    lcd_init();
+    lcd_fill(0, 0, 240, 240, C_BLACK);
+    fm1_input_init();
+    fm1_adc_init();
+#if BOARD_SMK37
+    smk_trim_read();                            /* (after fm1_input_init: it sets the defaults first) */
+#ifndef OLD_OWNER_AT
+    smk_owner_check();
+#endif
+#endif
+#ifdef APP_EARLY
+    APP_EARLY();
+#endif
+    fm1_audio_init(abuf, HALF_WORDS, isr_alnk0, 3);   /* (abuf is zero: .bss) */
+    usb_start();
+#if FELUCCA_UART
+    uart_midi_init();                           /* before TIMER5: PORTH read-modify-write */
+#endif
+    fm1_timer5_start(isr_timer5, 4);
+    fm1_guard_lock_top();
+    fm1_irq_enable_all();
+    app_main();
+    for (;;)
+        platform_poll();
+}
+#endif

@@ -1,0 +1,222 @@
+# Elixir
+
+A free, open-source drum synth and sequencer for the M-VAVE FM-1. It started as a port of the Erica Synths LXR-02 drum machine's firmware and kept going.
+
+**Website, install, manual and emulator:** https://dmajka.github.io/elixir/
+
+- **Drum voices:** the LXR-02's six voices on seven tracks, plus 29 sound engines on the three drum tracks: Mutable Instruments Rings' resonators and 11 of Plaits' engines (two at a time), the granular CLOUD and RAIN, ENSEMBLE (eight stacked sines), colored NOISE and ten microsound types.
+- **Sound shaping:** 18 filter types (303-style ACID, MS-20, a Moog-style ladder, combs, vowels, chords), nine waveshapers, bit and sample-rate reduction, tilt EQ, a frequency shifter or ring modulator per track, random per hit, choke groups and cross modulation.
+- **Effects:** an FX bus (phaser, flanger, frequency shifter, ring mod, compressor), a delay with a send on every track (mono, ping-pong, tape or granular, with a dub feedback band), four reverbs, master DIRT, a sidechain compressor and a master filter (LXR, ACID, MS-20 or RING, which rings the whole beat in a chord).
+- **Sequencing:** 32 patterns of up to 64 steps, parameter locks, trig conditions, ratchets, per-track length, clock, direction and time stretch, 28 scales, a melody generator (16 shapes), 12 groove templates and songs.
+- **Generative and live:** generators (Euclid, Grids, Turing machine, cellular automata), SPELLS (guided randomizers with exact undo), WANDER (slow change over minutes), PERFORM (the keys as live effects), RUSH, TRANSPOSE, four global LFOs with an envelope follower, macros and links between tracks.
+- **MIDI and USB:** over 400 parameters by CC or NRPN, a CC remapper in the browser, a map for 8-column controllers, clock in and out, and 8-channel USB audio (the mix and six stems).
+- **LXR-02 compatible:** its 85 factory kits built in (with Erica Synths' permission), its CC and NRPN map, and .SND kit and project import.
+
+The FM-1's second core renders the drum voices. It is built on [Felucca](https://github.com/hugelton/Felucca)'s hardware layer, USB stack, updater, reverb and emulator.
+
+The FM-1 has no FPU, so the LXR's floating-point DSP is rewritten in fixed point. `tests/compare_test.c` renders each voice with both engines and compares them: levels match to 0.1 dB, and the tonal voices correlate at 0.99–1.00. Noise-based sounds correlate lower only because the noise generator differs.
+
+**Formerly Kettle.** Elixir was called Kettle up to 0.13 (github.com/dmajka/kettle). A unit running Kettle updates to Elixir from the install page and keeps its projects, kit library and settings.
+
+**Unofficial.** Not affiliated with or endorsed by Erica Synths or M-VAVE.
+
+**[MANUAL.md](MANUAL.md)** documents everything: the controls, every page, and what Elixir adds to the LXR-02.
+
+## Controls
+
+| FM-1 control | Elixir |
+|---|---|
+| White keys 1–16 | Steps of the shown bar · patterns (pattern page) · rolls, FILL and effects (PERF) |
+| Black keys 1–7 | Tracks D1 D2 D3 SN CY CH OH (select) · SHIFT (OCT−) + key: mute · SHIFT (OCT−) + GLO: solo the selected track |
+| Black keys 8–11 | Bars 1–4 (shown bar) · banks of 16 (2 on the pattern page, 4 for kits and songs) · SHIFT (OCT−): track length · COPY (OCT+): copy the shown bar into it (on the grid: every track) |
+| OCT− | **SHIFT** (hold it: the screen shows every SHIFT combination) |
+| OCT+ | **COPY** (hold + track/bar/pattern) · held on a sound page + a knob: **CONTROL ALL** · SHIFT (OCT−) + OCT+ = **CLEAR** (on a sound page: CLEAR SOUND, the voice back to init; on the pattern page, or SHIFT (OCT−) + a pattern: delete it) · OK in dialogs |
+| EDIT | Model → oscillator → FM → transient (click); SELECT goes through every sound page, the modulation last · SHIFT (OCT−) + EDIT: **KEYS** (the keys play the track's voice, on every page till SHIFT (OCT−) + EDIT again; the header shows KEYS) |
+| ENV | Amp EG → gate → mod EG / velocity |
+| SCL | Filter → shape (waveshaper, drive, sample rate, bits, tilt) → insert FX (shifter, ring) |
+| LFO | LFO 1 → LFO 2 (two pages each) → random per hit → cross mod / choke → FX track sends |
+| GLO | Mixer (volume, pan, FX send, reverb send) → config (MIDI, sync; LOAD: the load by part and the cores; ELIXIR: the version and each core's load) |
+| FX | FX bus: ring mod, compressor, delay (mono, ping pong, tape), phaser, flanger → reverb → delay dub / send → dirt → master compressor → the voices' FX and reverb sends (SELECT: the pages) |
+| SEQ | The track's pages (track, generator, action, groove, bounce, melody, scale) → step edit: velocity, note, probability, condition → flam, shift, length → locks → ratchet (SELECT: the pages; SEQ again: the other set) · SHIFT (OCT−) + SEQ: links |
+| ARP | PERF: PERFORM (rolls, effects, mutes, master filter, density, stutter, PERFORM 2) → SPELLS → WANDER → GLOBAL MOD (global LFOs, macros, links) |
+| HOME | Grid → patterns → song · SHIFT (OCT−) + HOME: **PERF RESET** (every performance effect off: latched keys, rolls, STUTTER's chance, DENSITY, the master filter) |
+| SAVE | Save → load (kit, pattern, song, morph, project) |
+| PLAY / REC | Start/stop (SHIFT (OCT−) + PLAY: the song from the top) · record (SHIFT (OCT−) + REC: options) |
+| ALGORITHM | Track |
+| SELECT | Page / list position |
+| PRESETS | Kit browser (KNOB 1: from the slots or the kit library; OCT+ loads) · on a sound page or in KEYS: the sound browser (OCT+ keeps, OCT− reverts) |
+| KNOB 1–4 | The four parameters on screen. **Hold a step and turn a knob** to lock that parameter on that step |
+
+Patterns keep their edits when you switch, as on an Elektron box: they are part of the session, which AUTOSAVE keeps. The pattern page's Edits setting can drop them instead, the LXR's way. RELOAD reverts the playing pattern either way.
+
+SHIFT (OCT−) held shows the menu; with a white key: 1–7 audition a voice, 8 load KIT, 9 load MORPH, 10 RESET SOUND, 11 RESET PERF, 12 SOLO, 13 RELOAD. Held while turning a knob, it is a fine adjust. HOME's third page is LOAD (grid → patterns → **load** → song): kits (from the slots, the library or the factory kits), morph, sounds, projects.
+
+## Sends and reverb
+
+Each voice has two sends, set on the mixer's FX SEND and REVERB SEND pages (GLO → mixer, SELECT):
+
+- **FX send** sets how much of the voice goes through the FX bus instead of straight to its output. At 127 the whole voice goes through the bus. This is the LXR's Out = FX BUS, so kits and projects that used FX BUS load as FX send 127 with the output set to STEREO, and sound the same.
+- **Reverb send** feeds the voice into the reverb, on top of its output.
+
+The reverb is a send bus after the FX bus. Its page is the third FX page: model (ROOM, SPRING, HALL, PLATE), size, damping and return level. PLATE is a fixed-point port of Clouds' reverb (Jon Dattorro's plate), checked against Clouds' code by `tests/reverb_compare.sh`. The return level is also on the second mixer pan page. Sends and reverb settings are part of the kit, morph with it, and can be locked per step (hold a step and turn the knob on the mixer page). When nothing has been sent to it for about 0.4 s and its tail is silent, the reverb stops processing until the next send.
+
+## Copying a bar
+
+On the grid (HOME), hold COPY (OCT+) and press a bar key. The bar you are looking at is copied, every track, into that bar. A track that ended before the new bar grows to include it, unless its length isn't a whole number of bars (a 12-step track keeps its 12). Then move to the new bar and change what you want. On the other pages (a sound page, step edit), COPY (OCT+) + bar key copies only the selected track.
+
+## Steps and tracks
+
+**Per step** (SEQ twice, then SELECT for the pages):
+- **Condition** (STEP page): when the step plays. A:B plays the A-th time of every B times round (1:2, 2:4, 3:8 ...). FILL plays only while PERF's FILL key is held, !FILL only while it isn't. PRE plays if the track's last condition was true, NEI if the previous track's was. 1ST plays the first time round after PLAY. The ! versions are the opposite. A step's chance still applies on top.
+- **Ratchet** (RATCHET page): 2–8 hits from the step, at 1/32, 1/48, 1/64 or 1/24, with the velocity FLAT, fading DOWN or rising UP. A ratchet can run past its step.
+- On the grid, a condition shows as a dot top left, a ratchet as a bar under the step.
+
+**Per track** (SEQ: the TRACK page first, SELECT for the next):
+- **Generator** (KNOB 1): OFF, EUCLID, MUTATE, TURING, CELLULAR or GRIDS; KNOBS 2–4 are its settings.
+  - EUCLID: length, hits, rotation. It writes the track's steps, as the LXR's Euclid does. It starts at 0 hits over the track's length and changes nothing until the hits are turned. A second pulse (the ACTION page: Hits 2, Rotate 2) over the same length joins the first by OR, XOR, AND or SUB.
+  - The others play a live copy of the track and change it as it plays. The pattern itself stays as it was until COMMIT copies the live track into it. EUCLID then MUTATE mutates the Euclid rhythm.
+  - MUTATE: amount, freeze. Each time round, up to two changes: a step flipped, a step moved, a lock's (or the velocity's) value drifted.
+  - TURING: length (the register, 2–16), lock (0 random … 127 repeats), density (how many steps play).
+  - CELLULAR: rule (Wolfram's 0–255: 30, 90, 110 …), freeze. Each time round the steps become the rule's next row.
+  - GRIDS: Mutable Instruments' Grids drum map. Settings: part (BD, SD, HH), density, accent (the velocity follows the map). Put the kick on BD, the snare on SD and a hat on HH, then explore the map.
+- **Action** (3rd page): pick one with KNOB 1, the title says PRESS OCT+ TO …, press OCT+. EUCLID has DICE (its hits placed at random) and UNDO; the live generators COMMIT, UNDO and RESET (the live track from the pattern again, as turning a generator on or changing pattern does). UNDO takes back the last DICE, COMMIT or Euclid change; again, it redoes it. On a GRIDS track the page also has the map's X, Y and chaos, which belong to the pattern, so turning them moves every Grids track together.
+- **Melody** (6th and 7th pages): which note each hit plays, beside any generator: SHAPE (RANDOM, WALK, ARP UP/DN/U-D, MOTIF), SPREAD, BIAS, STEPS (all the scale's degrees down to root and fifth), and DÉJÀ VU, LOOP (1–16), LENGTH, LEN VAR. After Marbles' X section. COMMIT writes the notes into the steps.
+- **Track** (1st page): length; clock, the track's step rate against the pattern (/4, /3, /2, 2/3, 3/4, 1x, 4/3, 3/2, x2, x3, x4) for polyrhythms, or with lengths for polymeters (the pattern lasts as long as its longest track); **direction**: FWD, REV, PING (ping-pong), PING2 (the ends played twice), RAND (any step), WALK (a step either way). A time round stays the track's length in steps, so conditions and generators keep their timing.
+- **Scale** (8th page): the pattern's root and scale (17, from chromatic to pelog) and which tracks follow it (D1–D3 by default): their notes, random pitch, KEYS and MIDI in go to the nearest degree.
+- **Groove** (4th page, from 0.18): the pattern's groove (OFF, SWING 54–71%, LAZY, DILLA, 2-STEP, DUB, PUSH, TECHNO, BROKEN: timing and velocity per 16th), its amount (0–127%, 100% as written), HUMANIZE (random timing and velocity per hit), and whether the track follows (all by default).
+- **Bounce** (5th page): the bouncing ratchets' first gap and pitch drift.
+
+## Performance (PERF)
+
+Press ARP for PERF. The white keys act while held, and SHIFT (OCT−) + a key latches it on (the key again turns it off). Leaving PERF (HOME, SEQ) turns off whatever is latched.
+
+| Keys | |
+|---|---|
+| 1–7 | Roll the track at the roll rate (as on the LXR), at the KEYS velocity |
+| 8 FILL | Every step plays, whatever its probability |
+| 9 RPT | **Repeat:** the sequencer loops its position at the repeat length (1/4, 1/8, 1/16, 1/32: the bar keys or the Repeat knob), starting on that grid. When you let go, the pattern carries on where it would have been. |
+| 10 FRZ | **Freeze:** the FX bus delay loops what it holds (input off, feedback 100%). It needs the FX bus set to DELAY; the longest loop is about 0.74 s. |
+| 11 T.RV | **Throw:** the selected track's reverb send goes to 127 while held, and the tail rings out after. The ALGORITHM encoder selects the track. |
+| 12 T.FX | **Throw** to the FX bus (FX send 127) |
+| 13 FB+ | **Feedback push:** delay feedback to 0.95 (phaser and flanger to their maximum) |
+| 14 STP | **Tape stop:** tempo and every voice's pitch slow to a stop over the tape time (0.2–4 s), then go silent. When you let go, they spin back up in 0.25 s. |
+| 15 LP~ / 16 HP~ | **Sweeps:** push the master filter to its low-pass or high-pass end over a bar, and back in a quarter bar after you let go |
+| Black keys | Mutes · bar keys: repeat length |
+
+The knobs' pages are in four sets, ARP between them, SELECT within each: **PERFORM** (PERFORM, MORE, DENSITY, STUTTER, then PERFORM 2 and its setups), **SPELLS** (GRIMOIRE, CAST, CHARACTER, LIMITS, MOTION), **WANDER** (QUEST, PACE, HOME) and **GLOBAL MOD** (the global LFOs, the macros, the links).
+
+- **Perform** (the LXR's PERFORMANCE page): tempo, roll rate, morph, and **SRate**, the LXR's global sample-rate reducer (each voice's own rate times this one; part of the kit). While a roll is held, the roll knob sweeps its rate smoothly from 1/4 to 1/192.
+- **More:** Master filter (off at the middle; left a low-pass on the master, right a high-pass), repeat length, shuffle, tape time.
+- **Density:** one knob from −100% (only each bar's first step) to +100% (every chance up, then ghost notes, then ratchets: BUILD), the weakest steps first; the black keys leave tracks out. **Vary** (from 0.19) draws the order again each time round, so it changes bar to bar; **OCT+** commits what it does into the pattern (DENSITY back to 0; OCT+ again: undo).
+- **Macros:** four knobs. **Macro setup:** pick a macro, its target (any parameter a step can lock), and its min and max. A max below the min turns the macro the other way. Turning a macro under REC records locks, as any knob does.
+- **Global LFO 1 to 4** (two pages each): an LFO on the whole kit's performance controls: morph, the master filter (both ways, or towards LP or HP), feedback push, comb, crush, jitter, cuts, pump, density, transpose, the melodies' change and spread, the delay's feedback and time, the reverb sends, the master dirt or a macro. Depth −127 to +127; Sync from 256 bars to 1/32 at the tempo (triplets, dotted, 3/8 and 5/16 included), or OFF and a free Rate from 0.01 to 20 Hz; the LFO waves; mode FREE, TRIG, HOLD, ONE (one-shot) or HALF, triggered by PLAY, each pattern change or each bar (or OCT+ on its page). A one-shot saw on morph over 64 bars turns one kit into another while you play. The knobs stay where you left them; the LFOs move the sound.
+- **Spells** (from 0.19): NONE (a little variation) and eleven guided randomizers (Poltergeist, Skeleton, Glitch Storm, Haunted Dub, Forbidden Ritual, Raster Séance, Concrete Drift, Rust Circuit, Glass Cathedral, Biofeedback, Whispering Motes: MICRO's quiet sounds and a hushed kick). The black keys pick the target tracks (bar 1: all/none), the white keys what may change (1–8 sound: pitch, oscillator, transient, envelopes, filter, drive, FX, modulation; 9–16 pattern: hits, accents, chance, timing, ratchets, notes, length, links). COPY (OCT+) rolls a 12-sided die and casts, COPY (OCT+) again rerolls from before the cast, SHIFT (OCT−) takes it back exactly, bar 2 keeps it, bar 3 saves a recipe (U1–U8), bar 4 resets the spell's knobs. D1 always stays a kick, of the spell's kind; D2 and D3 stay toms (floor, then rack), and spells often give them a melody in the pattern's scale. CAST sets how much (sound, pattern, density, chaos), CHARACTER the spell's direction, GRIMOIRE the spell, variation, scope and roll (new or same), LIMITS the most a spell sets for the reverb and FX sends, the reverb level and the FX mix (30, 30, 80, 64 at first), MOTION how many targets get their own speed or direction (SAME, ONE, FEW, MANY, FREE) and the lengths a cast may give (BARS, EVEN, ODD).
+- **Wander** (from 0.23): the pattern changes slowly over minutes, along a quest of chapters with moods (Energy, Light, Space, Grit): THE LONG ROAD, HOMECOMING, THE SPIRE, THE HOLLOW HILL, THE TIDE. Threads move one track's sound a notch at a time with a gesture (darker, wetter, metallic…), Energy thins or fills the hits through each track's density (the hats first, the kick and snare barely). COPY (OCT+) sets out, SHIFT (OCT−) comes home over Return bars (again: at once), bar 2 KEEPs where you are, bar 3 RESTs. Fate decides the road's end: HOME, TREASURE, WOUND, LOST or DICE. QUEST draws the road, PACE a compass of the moods.
+- **PERFORM 2** and its two setup pages: a second bank of key effects (drill, half time, jitter, cuts, short, pump, comb, space, crush, reverse); see the manual.
+
+Macros, the repeat length, the tape time and the global LFOs are saved with the project.
+
+## Sound shaping
+
+Each voice (the open and closed hats share one) has extra pages of Elixir's. All of their settings are part of the kit, morph with it, and can be locked per step.
+
+From 0.18 the LFO's and the velocity's targets go on past the LXR's parameters to Elixir's: the sends, tilt, bits, the random amounts, cross mod's amount, the MODEL knobs, and the reverb, delay and dirt settings.
+
+From 0.18 the filter's **Type** goes on past the LXR's OFF to seven of Elixir's: **LP4** (a four-pole ladder), **COMB+** and **COMB−** (combs tuned by Frequency from 86 Hz up five octaves, following the played note), **ALLPASS** (a phaser's notches, still until an LFO moves them), **VOWEL** (formants, A to U), **DUB BP** (the BP into a saturator) and **CHORD** (band-passes at a root, its fifth and octave). Same knobs, no kit bytes; a .SND sent to an LXR-02 gets LP instead. From 1.0 four character filters follow: **ACID** (a 303-style diode ladder), **MS20 LP** and **MS20 HP** (a diode clip in the resonance loop) and **LADDER** (a Moog-style ladder with BASS COMP), with one new per-voice knob, FILTER X (ENV AMT: the amp envelope opens the cutoff; LADDER: BASS COMP). The master's master filter can be ACID or MS20 too (FX → MASTER FILTER, saved with the project).
+
+- **Shape** (SCL, press again after the filter): the **waveshaper** used by the voice's drive: LXR (the original curve), FOLD, CLIP, ASYM (soft on top, clipped below), RECTIFY (full-wave, an octave up), FUZZ, TAPE, SINE FOLD, BITE. Also the **drive** itself, the LXR's **sample rate** (from its Mix page, gone from 0.19), **bits** (OFF, then 15 down to 1; applied after the sample-rate reducer) and **tilt** (0 is flat; + brighter, − darker).
+- **Gate** (ENV, after the amp EG): ON holds the voice for the step's length (step edit's STEP page: AUTO, 1/32 … 1/2, 3/4 … 64 bars, INF, TIE), and MIDI out sends the note-off then.
+- **Every LFO's pages** (from 1.0; the track LFOs and the global ones): **Dest, Depth, Sync, Rate**, then **Wave, Phase, Mode, Retrigger** (Trig on the global LFOs). Sync goes by length, OFF then slow to fast, with 3/4, 3/8, 5/16 and 3/16 added to the LXR's values; Rate is used when Sync is OFF. LFO 1's Dest goes on through every voice's parameters, so it picks the voice too.
+- **LFO mode** (page 2, KNOB 3): TRIG (the LXR's: a hit restarts it), HOLD (runs free, its value held at each hit), ONE (one cycle from a hit, then still: an envelope) or HALF, as on Elektron's machines.
+- **LFO 2** (LFO, after LFO 1; from 0.18): a second LFO on every track with LFO 1's knobs, waves, sync, retrigger, phase and modes. Its target is one of the track's own parameters (the LXR's or Elixir's); on the same target as LFO 1 it adds to it. In morph its switches change at the halfway point, its depth dipping to 0 there.
+- **Insert FX** (SCL, after shape; from 0.18): one effect per track between the shaping and the pan and sends: **SHIFTER** (a frequency shifter, ±500 Hz, with feedback) or **RING** (against a sine, or AM). (Up to 0.25 also PHASER, FLANGER, CHORUS, TREMOLO and AUTOPAN; from 1.0 a kit with one of them loads with the insert OFF.) **Amount** (0: none), and two knobs named for the type.
+- **Random per hit** (LFO, next): how much each hit varies in **pitch** (up to an octave either way at 127; small amounts are subtle), **decay** (half to double), **filter** cutoff and **pan**.
+- **Cross mod / choke** (LFO, next): another voice as the **source** and a **mode**. DUCK turns this voice down while the source sounds, FILTER opens this voice's filter with the source's level, and RING multiplies the two. **Amount** sets how much. **Choke** puts the voice in a group from 1 to 4. A hit on any voice in the group fades the others out within 1.5 ms.
+
+Drum 1–3 also have **models** (EDIT's first page: MODEL; on LXR it holds the model alone), ported from Mutable Instruments **Rings** (MIT license) to fixed point: **MODAL** (Rings' modal resonator, up to 32 modes: bars, plates, bells, drum heads), **STRING** (its string, with dispersion and a curved bridge) and **FM** (its two-operator FM voice). The knobs are Rings': **decay** (DAMPING), **bright** (BRIGHTNESS), **struct** (STRUCTURE), **position** (POSITION), plus **exciter** (0: Rings' own exciter at the hit; 127: the voice's own LXR sound, as if patched into Rings' input) and **tension** (the pitch drop of a hard hit). The voice's filter, shape and sends still apply. Rings' sympathetic strings and reverb aren't ported. `tests/rings_compare.cc` checks the port against Rings' own code. Projects from 0.8 and before load their old models (SKIN, BAR, BELL, PLATE, TUBE) as MODAL or STRING.
+
+From 0.15 the MODEL list also has Plaits' original engines (**P VA** … **P HH**: virtual analog, waveshaping, FM, grain, additive, chords, speech, swarm, filtered and particle noise, inharmonic string, modal, bass drum, snare, hi-hat), ported from Mutable Instruments **Plaits** (MIT license). Their knobs are Plaits': **Harmonic**, **Timbre**, **Morph**, plus **Color** (Plaits' low-pass gate on the amp EG; 0 a plain VCA), **Aux** (OUT to AUX) and **Env** (the amp EG's amount on Timbre and Morph). `tests/plaits_compare.sh` checks them against Plaits' own code. The models are **experimental** (not part of the LXR-02) and heavy: at most two play at once, rendered with D1–D3 on the FM-1's second core (one on a unit that falls back to one core; CONFIG → LOAD shows the cores and the load by part).
+
+From 0.17 every track's MODEL also has **MICRO** types, after GLITCH (ttreu's FM-1 firmware): **CLICK** (0.1–1.5 ms), **TRAIN**, **CRUNCH**, **BITS**, **BURST**, **SNAP**, **GRAIN** (resonant noise grains), **DUST**, **POP** and **CHIRP**. The type replaces the voice's oscillators, FM and transient; its knobs are **Length**, **Color**, **Jitter**, **Reverse** (the chance a hit plays backwards) and **Tension**. The voice's pitch moves the sound, and its filter, shape, sends and locks still apply; the amp EG doesn't (Length does). On the snare, cymbal and hats Model goes from LXR straight to the MICRO types. They cost less than the LXR voice they replace and aren't counted in the two-model limit.
+
+**Control All** (as on Elektron's boxes): hold OCT+ on a sound page and turn a knob, and that parameter moves on every track that has it, each from its own value, so the kit keeps its balance. Keep holding and page (SELECT, the sound buttons) to move more. Letting go of OCT+ asks whether to revert: OCT+ again reverts the kit (the default), OCT− keeps the changes, so a slipped thumb never keeps them by accident. It records no locks. During one, a voice key leaves that track out (again: back in; kept in the settings). From MIDI (1.0), the remote's GLOBAL buttons 62 (held) and 63 (latched) turn it on without OCT+: a voice's CC, NRPN or TRACKS knob then moves every track in it by its step; letting go keeps, button 71 reverts.
+
+**KEYS** (SHIFT (OCT−) + EDIT): the white and black keys play the selected track's voice chromatically (KNOB 1: octave). Under REC the notes go into the steps. The keys have no velocity, so KNOB 2 sets it (for rolls too) and KNOB 3 the accent, played with SHIFT (OCT−).
+
+**Sound browser:** on a track's sound pages, turn PRESETS to step through the sounds that track can take (the library's sounds, then the voices of the library's kits, the kit slots and the factory bank), each auditioned; OCT+ keeps one, OCT− goes back. SAVE → SOUND saves a track's sound to the library.
+
+The FX bus has two new types. **Phaser**: rate, depth, feedback, center. **Flanger**: rate, depth, feedback (negative below the middle) and delay. Both sound strongest at DRY/WET 50%. DELAY has two more modes, **TAPE** and **TAPE PP**: a half-rate line (1.49 s), wow, a low cut and soft clip in the loop (feedback to 115%), plus SYNC (note values at the tempo, all modes), SATURATE, GLITCH (stutter, reverse, skip, half speed), PITCH (+12, +7, −12, detune per repeat) and ECHO>REV. **DIRT** (the last FX page): BUS DIRT drives the bus's input whatever its type; MASTER and AMOUNT drive the whole mix (TAPE, TUBE, FUZZ, DIODE, FOLD) before the master filter.
+
+## MIDI and sync
+
+- **In:** USB MIDI and the TRS jack. Notes on each track's channel play its voice; the global channel plays the selected track. CC *n* sets parameter *n*−1 and NRPN reaches the rest, as on the LXR. CC0 picks a kit, program change 0–31 a pattern.
+- **Elixir's own parameters** (NRPN, six numbers per voice-based setting, in the order D1 D2 D3 SN CY HH): 174–179 FX send, 180–185 reverb send, 186 reverb size, 187 damping, 188 level, 189 model (0 room, 1 spring, 2 hall, 3 plate), 190–195 bits, 196–201 waveshaper, 202–207 tilt, 208–213 choke group, 214–219 random pitch, 220–225 random decay, 226–231 random filter, 232–237 random pan, 238–243 cross-mod source (0 none, 1–6), 244–249 cross-mod mode (0 duck, 1 filter, 2 ring), 250–255 cross-mod amount.
+- **Remote map** (CONFIG → REMOTE, two channels: TRACKS 15 and GLOBAL 16 by default): rows of eight for a controller such as the Launch Control XL, and no number used twice on a channel. TRACKS: columns 1–7 the tracks and 8 the selected track; knobs on CCs 8–103 (volume, pan, filter, resonance, decay, pitch, drive, sends, sample rate, LFO, each track's DENSITY), mute and solo on 104–119. GLOBAL: knobs on CCs 8–47 (tempo, shuffle, morph, SRate, master filter, FX bus, dirt, reverb, DENSITY, ghosts, build, vary, macros, PERFORM 2, the LFO depths), buttons on 48–111 (PLAY, REC, FILL, the held and latched effects, select, rolls, DRILL, patterns, the tracks DENSITY leaves out), a roll per track on 112–119 (its rate by the fader: 1/4 to 1/32 on the grid, then free up to 1/256). Both channels: CC 124 the master volume, 125 the morph kit, 126 a slot kit, 127 a factory kit. Buttons work as CCs or notes. Knobs PICKUP, ABS or REL. Values and button states go back out over USB. Under REC a track knob records locks on its own track. The table is in the manual (§15).
+- **Out:** USB MIDI. The FM-1 has no MIDI out jack. Each track's notes go out on its channel when CONFIG → MIDI OUT has it on (all off by default).
+- **Master volume:** CONFIG → MIDI OUT, VOLUME (or the FX bus's last page), and CC 124: after MASTER, saved with the settings.
+- **Clock out:** always sent, 24 PPQ, plus start/stop.
+- **Clock in:** turn the tempo below its minimum to **MIDI**. Elixir then follows incoming clock and start/continue/stop.
+
+## Try it in the browser
+
+```sh
+tools/gen.sh           # generated headers (needs Python 3 with Pillow and fontTools)
+web/emu/build.sh       # needs Emscripten -> build/emu/
+cd build/emu && python3 -m http.server 8765    # open http://localhost:8765
+```
+
+The emulator runs the firmware's own C sources compiled to WebAssembly, on a simulated FM-1. Use the computer keyboard or the mouse. Enable Web MIDI to play it from a controller and to send its clock to other apps.
+
+## Library: backup, restore, LXR-02 kits
+
+`web/library.html` (the site's `library/`) talks to Elixir over USB MIDI SysEx (`firmware/src/library.c`, protocol in its header; `web/library.js`). It backs up and restores projects, imports LXR-02 .SND kits, imports a whole LXR-02 project folder (kits, patterns in V1–V3 formats, songs; Elixir's 32 patterns take one half of the LXR's 64), and backs up and restores the kit library (`.ktlb`); the emulator page has the same under **Library**.
+
+**Kit library** (`firmware/src/kitlib.c`): 128 kits and 128 single sounds in flash at 0xEA000–0xFBFFF, outside the projects, read one at a time (no RAM per kit). PRESETS' kit browser shows it with KNOB 1 at From LIBRARY, SAVE / LOAD → KIT and MORPH reach it with KNOB 2 (To / From LIBRARY), SAVE / LOAD → SOUND saves or loads one track's sound, and the sound browser lists it. Writes are a log with a commit record written last, so a write cut short leaves the slot as it was. That flash area is outside Elixir's updater and the stock firmware's known store; that the stock V15 leaves it alone is not yet confirmed on a unit, so back the library up before installing other firmware. The library page and the emulator's Library import LXR-02 kits into it or into the slots (a folder: its subfolders too); in the emulator, kits can be tried first and the library downloaded for the FM-1.
+
+**LXR-02 kits** (0.19, distributed with Erica Synths' permission; `assets/kits/README.md`): the 85 factory kits in `assets/kits/factory` are built into every build (`tools/gen_factory_kits.py` → `build/gen/factory_kits.h`, run by `build.py`, `tools/gen.sh` and `web/emu/build.sh`): the kit browser's FACTORY part, LOAD → FACTORY and the sound browser. Hrtl's DLC and UNTZ kits in `assets/kits/hrtl-*` become kit library files (`tools/gen_kit_packs.py` → `build/emu/kits/*.ktlb`, by `web/emu/build.sh`) that the install page, the library page and the emulators put into the library's first empty slots from L1 (`web/library.js` `addPacks`; a kit already there by name is skipped).
+
+## Build the firmware
+
+Same requirements as Felucca: the JieLi pi32v2 toolchain (`~/.jieli/toolchain`), the JieLi AC79 SDK (`~/fw-AC79_AIoT_SDK`), Python 3 with Pillow and fontTools, and Docker on macOS (the toolchain is Linux x86-64).
+
+```sh
+PYTHON=/path/to/python ./build.sh       # -> build/elixir.fwsc
+```
+
+## Install
+
+`web/make_site.py` makes Elixir's site in `build/site` (after `./build.sh` and `web/emu/build.sh`): the front page (`web/index.html`, `web/site.css`; its screens in `web/shots/`, made from ui_test's by `tools/site_shots.py`), the install page at `install/` (Web MIDI, Chrome or Edge: a device check, official V15 first, Elixir, and back to V15), the emulator (`try/`), the manual as a page (`manual/`), and the package, source and licenses (`firmware/`). Any static host serves it. For GitHub Pages, `tools/publish_site.sh` builds it and commits it to the `gh-pages` branch (then `git push origin gh-pages`; Settings → Pages → Deploy from a branch: `gh-pages`, root). The source is at https://github.com/dmajka/elixir (`REPO` in `web/make_site.py`; the pages link it). Install the official V15 first (see the manual's section 1).
+
+Or install `build/elixir.fwsc` over USB:
+
+```sh
+python3 tools/fm1_install.py build/elixir.fwsc
+```
+
+To go back, install the official firmware file (`fm1_install.py FM-1.fwsc`) or any other alternative firmware. Elixir stores its projects and settings in the same flash region Felucca uses for its own data, so installing Elixir replaces data saved by Felucca.
+
+Projects saved by older versions load in newer ones. Elixir 0.1 had 64 patterns; newer versions keep the first 32, and songs that pointed past them play pattern 32 instead. Projects do not load in older versions than the one that saved them.
+
+## Tests
+
+```sh
+cc -O2 -std=gnu99 -w -I build/gen -I firmware/src -I firmware/hal tests/render_test.c -o build/render_test && build/render_test build/
+cc -O1 -std=gnu99 -w -I build/gen -I firmware/src -I firmware/hal tests/ui_test.c -o build/ui_test -lm && build/ui_test build/shots
+```
+
+```sh
+cc -O1 -std=gnu99 -w -I build/gen -I firmware/src -I firmware/hal tests/library_bridge.c -o build/library_bridge
+node tests/library_test.mjs [LXR project folder]   # the library page's code against the device's
+node tests/install_test.mjs                          # the install page's updater against simulated FM-1s
+```
+
+```sh
+EURORACK=path/to/eurorack STMLIB=path/to/stmlib tests/rings_compare.sh   # the models against Rings' own code
+EURORACK=path/to/eurorack STMLIB=path/to/stmlib tests/reverb_compare.sh  # PLATE against Clouds' reverb
+```
+
+`render_test` plays every voice and counts the MIDI clock. `ui_test` drives the panel as a user would (programming a beat, sound pages, locks, patterns, songs, saving and loading a project, MIDI sync in) and writes a screenshot of each screen to `build/shots/`. It also checks the sends, the reverb, the sound shaping, the phaser and flanger, loads a Elixir 0.1 project (`tests/data/proj_v1.bin`), and prints how big a busy and a dense project get. `compare_test` checks the voices against the original LXR DSP sources and needs the LXR repository (see its header). `library_test` runs the library page's own code against the device's through `library_bridge`: kits in and out, backups, restores, LXR projects (the LXR kits from `../lxr-02_kits` if there, or the project folder given), and the kit library. `install_test` runs the install page's updater (`web/fm1ota.js`) and device check (`web/install.js`) with the built package against simulated FM-1s over a mock Web MIDI: Kettle to Elixir (also when the computer keeps the name Kettle, a Windows-style port name, a release build's identity, a write cut off and resumed), Elixir to Elixir and V15 to Elixir, other MIDI gear left alone. `rings_compare` renders the models with Elixir's fixed-point port and with Rings' float code (github.com/pichenettes/eurorack and stmlib, not in this tree; the script sets their sample rate to Elixir's 44.1 kHz in a copy) over pitches and settings, and fails below a correlation of 0.99 or above an error of −30 dB. `reverb_compare` does the same for the PLATE reverb against Clouds' float code (the lengths scaled to Elixir's half rate, the LFOs' swings off): a correlation of 0.98 over the first second and the tail's energy within 2× where it is above the lines' floor.
+
+## License
+
+GPL-3.0-only. See [NOTICE.md](NOTICE.md) and `LICENSES/`.

@@ -1,0 +1,27 @@
+{
+  "repo": "https://github.com/PatttF/fm-106.git",
+  "commit": "b795c3d9431c4cd552d5951f70b549eeff5c288d",
+  "scope": "Upstream full-firmware credit context; actual DSP inclusion must be distinguished from UI/hardware/measurement references",
+  "documents": [
+    {
+      "path": "LICENSE",
+      "sha256": "e57f1c320b8cf8798a7d2ff83a6f9e06a33a03585f6e065fea97f1d86db84052",
+      "source_url": "https://github.com/PatttF/fm-106/blob/b795c3d9431c4cd552d5951f70b549eeff5c288d/LICENSE"
+    },
+    {
+      "path": "LICENSING.md",
+      "sha256": "005403f6cd8e09ea6e6677762e074d865be7fa7d3b92238f07384321b1d3efbf",
+      "source_url": "https://github.com/PatttF/fm-106/blob/b795c3d9431c4cd552d5951f70b549eeff5c288d/LICENSING.md"
+    },
+    {
+      "path": "README.md",
+      "sha256": "2b29cc9b13febfb01b3fc77bd92c5cc9e2a72583ab878a3c2deda85e7ab5076e",
+      "source_url": "https://github.com/PatttF/fm-106/blob/b795c3d9431c4cd552d5951f70b549eeff5c288d/README.md"
+    },
+    {
+      "path": "assets/fonts/Terminus-LICENSE.txt",
+      "sha256": "095f0fecbd11b69e806ee886ba382378c18b840b48b99140cf5f2901a00e2a7c",
+      "source_url": "https://github.com/PatttF/fm-106/blob/b795c3d9431c4cd552d5951f70b549eeff5c288d/assets/fonts/Terminus-LICENSE.txt"
+    }
+  ]
+}
