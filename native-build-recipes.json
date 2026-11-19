@@ -3279,6 +3279,7 @@
     ],
     [
       "clang++",
+      "-mmacosx-version-min=13.0",
       "-O1",
       "-g",
       "-fPIC",
@@ -3294,6 +3295,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3319,6 +3321,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3344,6 +3347,7 @@
     ],
     [
       "c++",
+      "-mmacosx-version-min=13.0",
       "-std=c++17",
       "-O2",
       "-fPIC",
@@ -3372,6 +3376,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3397,6 +3402,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3422,6 +3428,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3447,6 +3454,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3472,6 +3480,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3497,6 +3506,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-fPIC",
       "-c",
       "${SOURCE}/upstream/source-built/frodhes/source/plugin/src/coro/coro_x86_64.S",
@@ -3505,6 +3515,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3530,6 +3541,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3555,6 +3567,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3580,6 +3593,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3605,6 +3619,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-fPIC",
       "-c",
       "${SOURCE}/upstream/source-built/frodhes/source/plugin/src/coro/coro_arm64.S",
@@ -3613,6 +3628,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3638,6 +3654,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3662,6 +3679,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3687,6 +3705,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3712,6 +3731,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3737,6 +3757,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -3762,6 +3783,7 @@
     ],
     [
       "cc",
+      "-mmacosx-version-min=13.0",
       "-O2",
       "-std=gnu11",
       "-ffp-contract=off",
@@ -4387,6 +4409,7 @@
     ],
     [
       "clang++",
+      "-mmacosx-version-min=13.0",
       "-dynamiclib",
       "${SOURCE}/upstream/mpc3-native/mac/instrument/0.o",
       "-lpthread",
@@ -4396,6 +4419,7 @@
     ],
     [
       "c++",
+      "-mmacosx-version-min=13.0",
       "-shared",
       "-fPIC",
       "-O2",
