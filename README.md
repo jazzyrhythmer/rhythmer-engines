@@ -5,9 +5,9 @@
 20 sound engines, 36 Rhythmer Kits and 2,707 synth preset selections in one
 instrument. By Jazzy Rhythmer. **0.1.0 · Early Beta**.
 
-[Website & installation](https://jazzyrhythmer.github.io/mac/#release) ·
+[Website & installation](https://jazzyrhythmer.github.io/rhythmer-engines/#release) ·
 [Download AU + VST2 + VST3](https://github.com/jazzyrhythmer/rhythmer-engines/releases/tag/v0.1.0) ·
-[First session](https://jazzyrhythmer.github.io/mac/#guide)
+[First session](https://jazzyrhythmer.github.io/rhythmer-engines/#guide)
 
 ![Rhythmer Engines for Mac](docs/play.png)
 
@@ -58,7 +58,7 @@ Rhythmer Kit, Sophie, Elixir, Aphex, FM-106, FMini-1, CS-1, OberVave, K-WASUB,
 Hera, Braids, Plaits, Hortator, MONO2K, Prophet, S1Vave, Dexed, Guru-600,
 Frodhes and Tenebrae.
 
-[Hear the engines](https://jazzyrhythmer.github.io/mac/#engines) ·
+[Hear the engines](https://jazzyrhythmer.github.io/rhythmer-engines/#engines) ·
 [Original authors and licences](CREDITS.md)
 
 ## Source and licences
