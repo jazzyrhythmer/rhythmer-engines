@@ -9,7 +9,7 @@ python3 BUILD.py --build-root /path/to/rhythmer-build --cmake cmake --jobs 2
 ```
 
 All generated files go to `--build-root`; the source tree stays read-only.
-`formats/AU` and `formats/VST3` contain complete, ad-hoc-signed bundles.
+`formats/AU`, `formats/VST2` and `formats/VST3` contain complete, ad-hoc-signed bundles.
 `--native-only` builds the native backend/source-engine modules without JUCE.
 `--stage-only` restages an already completed build, including nested DSP modules.
 
@@ -17,5 +17,5 @@ All generated files go to `--build-root`; the source tree stays read-only.
 portable `${SOURCE}` paths. It retains the original Frodhes build receipts and
 its runtime module alias. `project/desktop/CMakeLists.txt` builds the native UI.
 `SOURCE-MANIFEST.json` lists SHA-256 hashes for the delivered source and data.
-The source snapshot was rebuilt and its AU/VST3 output was checked at three
+The source snapshot was rebuilt and its AU/VST2/VST3 output was checked at three
 sample rates. Original component licences and author notices remain in place.

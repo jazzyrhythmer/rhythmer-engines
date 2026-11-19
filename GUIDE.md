@@ -1,9 +1,9 @@
 # Rhythmer Engines for Mac
 
-By Jazzy Rhythmer. Apple Silicon, macOS 13 or later. AU and VST3.
+By Jazzy Rhythmer. Apple Silicon, macOS 13 or later. AU, VST2 and VST3.
 
 Extract the ZIP and copy the complete bundle into the matching user plug-in folder:
-`~/Library/Audio/Plug-Ins/Components` or `VST3`. Restart/rescan the DAW.
+AU: `~/Library/Audio/Plug-Ins/Components/`. VST2: `~/Library/Audio/Plug-Ins/VST/`. VST3: `~/Library/Audio/Plug-Ins/VST3/`. Restart/rescan the DAW.
 
 ## First sound
 
@@ -65,5 +65,5 @@ A synth's envelope/release can continue after a note-off; STOP SOUND or DAW stop
 clears held sound. GEN does not add a second playback layer to incoming MIDI.
 Your pattern/settings are saved with the plug-in's DAW session state.
 
-This version has no realtime MIDI output port. AU/VST3 clip import and file drag
+This version has no realtime MIDI output port. AU/VST2/VST3 clip import and file drag
 support depend on the host. A file export is always available separately.

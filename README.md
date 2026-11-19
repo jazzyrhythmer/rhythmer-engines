@@ -6,7 +6,7 @@
 instrument. By Jazzy Rhythmer. **0.1.0 · Early Beta**.
 
 [Website & installation](https://jazzyrhythmer.github.io/mac/#release) ·
-[Download AU + VST3](https://github.com/jazzyrhythmer/rhythmer-engines/releases/tag/v0.1.0) ·
+[Download AU + VST2 + VST3](https://github.com/jazzyrhythmer/rhythmer-engines/releases/tag/v0.1.0) ·
 [First session](https://jazzyrhythmer.github.io/mac/#guide)
 
 ![Rhythmer Engines for Mac](docs/play.png)
@@ -14,21 +14,22 @@ instrument. By Jazzy Rhythmer. **0.1.0 · Early Beta**.
 ## Compatibility
 
 - Apple Silicon Mac, macOS 13 or later.
-- Audio Unit (AU) and VST3 instrument hosts.
+- Audio Unit (AU), VST2 or VST3 instrument hosts.
 - This ZIP uses ad-hoc signing. It is not Developer ID-signed or Apple-notarized;
   macOS or your DAW may block it. See the installation guide if that happens.
 
 ## Install
 
-1. Download and extract the **AU + VST3 ZIP** from the release page. Quit your DAW.
+1. Download and extract the **AU + VST2 + VST3 ZIP** from the release page. Quit your DAW.
 2. In Finder, choose **Go → Go to Folder** (`Shift–Command–G`).
 3. Copy `AU/Rhythmer Engines.component` to
    `~/Library/Audio/Plug-Ins/Components/`.
-4. Copy `VST3/Rhythmer Engines.vst3` to `~/Library/Audio/Plug-Ins/VST3/`.
-   Create the destination folders if needed. You can install either format or both.
-5. Reopen/rescan your DAW. Add **Rhythmer Engines** to a MIDI instrument track.
+4. Copy `VST2/Rhythmer Engines.vst` to `~/Library/Audio/Plug-Ins/VST/`.
+5. Copy `VST3/Rhythmer Engines.vst3` to `~/Library/Audio/Plug-Ins/VST3/`.
+   Create the destination folders if needed. You can install any supported format.
+6. Reopen/rescan your DAW. Add **Rhythmer Engines** to a MIDI instrument track.
 
-Copy the **complete .component/.vst3 bundle**, not the files inside it. Keep one
+Copy the **complete .component/.vst/.vst3 bundle**, not the files inside it. Keep one
 installation location for each format: an older system-wide copy under
 `/Library/Audio/Plug-Ins/` may otherwise be scanned instead.
 
@@ -36,7 +37,7 @@ Start with **Rhythmer Kit / K-WASUB / 909**. Play MIDI notes **36–51** for its
 or select an individual synth with ENGINE and choose a sound with PRESET.
 
 If it does not appear, check the plug-in folder, native Apple Silicon host mode
-and the host's AU/VST3 settings, then rescan. For a macOS security message, review
+and the host's AU/VST2/VST3 settings, then rescan. For a macOS security message, review
 [Apple's Privacy & Security guidance](https://support.apple.com/102445).
 
 ## Work with the sound

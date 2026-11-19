@@ -39,8 +39,8 @@ if not a.stage_only:
     subprocess.run([a.cmake,'-S',str(source/'project/desktop'),'-B',str(desktop),
         '-DJUCE_PATH='+str(source/'juce'),'-DCMAKE_BUILD_TYPE=Release',
         '-DCMAKE_OSX_ARCHITECTURES=arm64','-DCMAKE_OSX_DEPLOYMENT_TARGET=13.0'],check=True)
-    subprocess.run([a.cmake,'--build',str(desktop),'--target','RhythmerDesktop_AU','RhythmerDesktop_VST3','-j'+str(a.jobs)],check=True)
-for fmt,ext in [('AU','component'),('VST3','vst3')]:
+    subprocess.run([a.cmake,'--build',str(desktop),'--target','RhythmerDesktop_AU','RhythmerDesktop_VST3','RhythmerVST2','-j'+str(a.jobs)],check=True)
+for fmt,ext in [('AU','component'),('VST2','vst'),('VST3','vst3')]:
     src=desktop/'RhythmerDesktop_artefacts/Release'/fmt/('Rhythmer Engines.'+ext)
     dst=build/'formats'/fmt/src.name
     if dst.exists():shutil.rmtree(dst) # Only generated build-root output.
@@ -71,4 +71,4 @@ for fmt,ext in [('AU','component'),('VST3','vst3')]:
         subprocess.run(['codesign','--force','--sign','-','--timestamp=none',str(f)],check=True,capture_output=True)
     subprocess.run(['codesign','--force','--deep','--sign','-','--timestamp=none',str(dst)],check=True,capture_output=True)
     subprocess.run(['codesign','--verify','--deep','--strict',str(dst)],check=True)
-print('AU + VST3 BUILD PASS:',build/'formats',flush=True)
+print('AU + VST2 + VST3 BUILD PASS:',build/'formats',flush=True)
