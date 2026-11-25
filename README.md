@@ -3,10 +3,10 @@
 **Find a sound. Shape it. Build a pattern.**
 
 22 sound engines, 69 Rhythmer Kits and 3,062 synth preset selections in one
-instrument. By Jazzy Rhythmer. **0.1.0 · Desktop Early Beta**.
+instrument. By Jazzy Rhythmer. **0.3.0 · Desktop Early Beta**.
 
 [Website & installation](https://jazzyrhythmer.github.io/rhythmer-engines/#release) ·
-[Download for Mac & Windows](https://github.com/jazzyrhythmer/rhythmer-engines/releases/tag/v0.1.0-desktop-beta.1) ·
+[Download for Mac & Windows](https://github.com/jazzyrhythmer/rhythmer-engines/releases/tag/v0.3.0) ·
 [First session](https://jazzyrhythmer.github.io/rhythmer-engines/#guide)
 
 ![Rhythmer Engines for Mac & Windows](docs/play.png)
