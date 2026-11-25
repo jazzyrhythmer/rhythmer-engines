@@ -1,9 +1,9 @@
-# Rhythmer Engines for Mac
+# Rhythmer Engines — Mac & Windows
 
-By Jazzy Rhythmer. Apple Silicon, macOS 13 or later. AU, VST2 and VST3.
+By Jazzy Rhythmer. Mac: Apple Silicon, macOS 13 or later, AU / VST2 / VST3. Windows: Windows 10/11 x64, VST3.
 
 Extract the ZIP and copy the complete bundle into the matching user plug-in folder:
-AU: `~/Library/Audio/Plug-Ins/Components/`. VST2: `~/Library/Audio/Plug-Ins/VST/`. VST3: `~/Library/Audio/Plug-Ins/VST3/`. Restart/rescan the DAW.
+`~/Library/Audio/Plug-Ins/Components`, `VST` or `VST3` on Mac. On Windows, copy the entire `.vst3` folder to `C:\Program Files\Common Files\VST3`. Restart/rescan the DAW.
 
 ## First sound
 
@@ -32,9 +32,10 @@ DAW transport stop also clears held notes. Normal note-offs preserve sound relea
 Save the DAW project to preserve the engine, sound edits, pad routes and kit mix.
 The contextual sound controls are manually editable, not host-automatable.
 
-The 36 factory kits use K-WASUB / 909 as their mix reference. Original source
-presets are unchanged; per-pad native levels and a saved kit output trim set the
-balance. A stereo peak guard acts only when the combined kit exceeds its ceiling.
+The 69 factory kits use K-WASUB / 909 as their mix reference. Original source
+presets are retained. The original 36 kits retain their pad calibration; the 33
+additional kits retain their original voice balance with a kit output trim.
+KrautDrums has shorter transients and remains slightly quieter in the test groove. A stereo peak guard acts only when the combined kit exceeds its ceiling.
 Individual synth programs are not normalized by this kit calibration.
 
 Built on retained Melodee components by Kerem Kilic / Ellic Studio and original
@@ -67,3 +68,8 @@ Your pattern/settings are saved with the plug-in's DAW session state.
 
 This version has no realtime MIDI output port. AU/VST2/VST3 clip import and file drag
 support depend on the host. A file export is always available separately.
+
+## Original preset envelopes
+
+Some Aphex drone programs have an original Hold of 8–20 seconds. Hold a note
+long enough to hear these sounds. Their factory envelopes have not been shortened.

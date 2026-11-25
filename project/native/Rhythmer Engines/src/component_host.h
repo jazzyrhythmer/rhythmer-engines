@@ -3,7 +3,7 @@
 #pragma once
 #include "mpc_vst2_abi.h"
 #include "third_party/json.hpp"
-#include <dlfcn.h>
+#include "component_library.h"
 #include <array>
 #include <atomic>
 #include <cmath>
@@ -14,7 +14,7 @@
 #include <vector>
 namespace re {
 using Json=nlohmann::json;
-inline constexpr const char* coreIds[]={"cs1","drumx","elixir","fm106","fmini","guru600","hortator","kwasub","kwasub-kit","mono2k","obervave","prophet","s1vave","aphex","braids","dexed","hera","plaits","sophie","6w6","8w8","9w9","cw78","trmpc","hortator","frodhes","tenebrae"};
+inline constexpr const char* coreIds[]={"cs1","drumx","elixir","fm106","fmini","guru600","hortator","kwasub","kwasub-kit","mono2k","obervave","prophet","s1vave","aphex","braids","dexed","hera","plaits","sophie","6w6","8w8","9w9","cw78","trmpc","hortator","frodhes","tenebrae","amino","fizzik","weird-dreams","krautdrums"};
 class Core {
  void* library_=nullptr;
  AEffect* e_=nullptr;
@@ -28,15 +28,15 @@ class Core {
  }
  public:
  Core(const std::string& folder,int source,const std::string& testPath={}){
-  if(source<0||source>=27)throw std::runtime_error("Invalid bundled engine");
-  auto path=testPath.empty()?folder+"/"+coreIds[source]+"/engine.so":testPath;
-  library_=dlopen(path.c_str(),RTLD_NOW|RTLD_LOCAL);
-  if(!library_)throw std::runtime_error(std::string("Engine load: ")+dlerror());
-  auto fn=reinterpret_cast<AEffect*(*)(audioMasterCallback)>(dlsym(library_,"VSTPluginMain"));
-  if(!fn){dlclose(library_);library_=nullptr;throw std::runtime_error("Missing engine entry point");}
+  if(source<0||source>=int(sizeof(coreIds)/sizeof(*coreIds)))throw std::runtime_error("Invalid bundled engine");
+  auto path=testPath.empty()?folder+"/"+coreIds[source]+"/"+componentFile:testPath;
+  library_=openLibrary(path);
+  if(!library_)throw std::runtime_error(std::string("Engine load: ")+libraryError());
+  auto fn=reinterpret_cast<AEffect*(*)(audioMasterCallback)>(librarySymbol(library_,"VSTPluginMain"));
+  if(!fn){closeLibrary(library_);library_=nullptr;throw std::runtime_error("Missing engine entry point");}
   e_=fn(host);
   if(!e_||e_->magic!=kEffectMagic||!e_->processReplacing||e_->numOutputs!=2){
-   if(e_)e_->dispatcher(e_,effClose,0,0,nullptr,0);dlclose(library_);e_=nullptr;library_=nullptr;
+   if(e_)e_->dispatcher(e_,effClose,0,0,nullptr,0);closeLibrary(library_);e_=nullptr;library_=nullptr;
    throw std::runtime_error("Invalid source component");
   }
   time_.sampleRate=44100;time_.tempo=120;time_.timeSigNumerator=4;time_.timeSigDenominator=4;
@@ -44,7 +44,7 @@ class Core {
   dispatch(effOpen);dispatch(effSetSampleRate,0,0,nullptr,44100);dispatch(effSetBlockSize,0,128);dispatch(effMainsChanged,0,1);
   dispatch(effSetProgram,0,0);float l[128]{},r[128]{};render(l,r,128);
  }
- ~Core(){if(e_){dispatch(effMainsChanged,0,0);dispatch(effClose);}if(library_)dlclose(library_);}
+ ~Core(){if(e_){dispatch(effMainsChanged,0,0);dispatch(effClose);}if(library_)closeLibrary(library_);}
  Core(const Core&)=delete;Core&operator=(const Core&)=delete;
  VstIntPtr dispatch(int op,int index=0,VstIntPtr value=0,void*ptr=nullptr,float opt=0){return e_->dispatcher(e_,op,index,value,ptr,opt);}
  int count()const{return e_->numParams;}
@@ -70,7 +70,9 @@ class Core {
   if(!reference.is_object()||!reference.contains("values"))return;
   // Restore the accepted original program's editable controls explicitly.
   // Constructors can have different init defaults than the released module.
-  for(const auto&p:source["parameters"]){int i=p["index"];if(i<count()&&i<int(reference["values"].size())&&!p.value("is_program_selector",false)&&!p.value("hidden_in_sample",false))set(i,reference["values"][i]);}
+  // Avoid rewriting identical values: original engines may invalidate their
+  // factory identity, or keep native resolution beyond the normalized getter.
+  for(const auto&p:source["parameters"]){int i=p["index"];if(i<count()&&i<int(reference["values"].size())&&!p.value("is_program_selector",false)&&!p.value("hidden_in_sample",false)&&std::fabs(get(i)-reference["values"][i].get<float>())>1e-6f)set(i,reference["values"][i]);}
   float l[128]{},r[128]{};render(l,r,128);
  }
  void midi(uint8_t s,uint8_t a,uint8_t b){

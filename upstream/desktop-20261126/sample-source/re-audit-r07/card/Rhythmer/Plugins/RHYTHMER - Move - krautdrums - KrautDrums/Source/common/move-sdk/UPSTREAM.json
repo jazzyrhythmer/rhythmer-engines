@@ -1,0 +1,8 @@
+{
+  "repo": "https://github.com/charlesvestal/schwung",
+  "commit": "673e67ab643806abf74e9fedf25f5911a6b14c8e",
+  "files": [
+    "src/host/plugin_api_v1.h",
+    "LICENSE"
+  ]
+}

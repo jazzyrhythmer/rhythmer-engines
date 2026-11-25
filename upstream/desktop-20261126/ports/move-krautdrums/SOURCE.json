@@ -1,0 +1,16 @@
+{
+  "id": "krautdrums",
+  "name": "krautdrums",
+  "repo": "https://github.com/filliformes/krautdrums-move",
+  "source_commit": "c359afeac8be6396401b1a6d5d9a297f7ed0220a",
+  "archive_sha256": "846b06bb7ba862bd3bfaf03c621c23c44f784d6855fedd24773030b50cb04e5e",
+  "license": "MIT",
+  "status": "candidate: not accepted for release",
+  "files": {
+    "LICENSE": "e42d79c0084041693bf9106dc54b02899dac6cdd0bfaa524c7b2f59a35eaf86d",
+    "README.md": "fbc0d8e246fc87470aec571e4d599e4ffdd0f2475d6d63ad3bd9e4e31beb4b34",
+    "src/dsp/drummer_one_voices.h": "60d3dde47aa10fe6ea735e6a0841b84f5e95428824f0445057422ac580dd53f4",
+    "src/dsp/krautdrums.c": "8c6ef7f744b04b960804714bd06865629d3870b1c020c52c5c60ae7c84c8d8d8",
+    "src/module.json": "2850fa0d53d1b240a62a62dd246c5a9fa29f4d1f7ed7c16ee03ee39afa7be46a"
+  }
+}

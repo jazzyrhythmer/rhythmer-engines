@@ -2,15 +2,24 @@
   "name": "Rhythmer Engines",
   "manufacturer": "Jazzy Rhythmer",
   "version": "0.1.0",
-  "format": "AU",
   "kind": "instrument",
-  "uid": "JFq7",
-  "numInputs": 0,
-  "numOutputs": 2,
-  "category": "Synth",
-  "description": "20 sound engines, 36 Rhythmer Kits, eight primary controls, detailed editing and MIDI-file generation.",
+  "description": "22 engines and 69 Rhythmer Kits; eight primary controls, detailed editing and MIDI GEN.",
   "author": "Jazzy Rhythmer",
-  "url": "https://github.com/jazzyrhythmer",
-  "license": "AGPL-3.0-or-later; original bundled components retain their own licenses",
-  "target": "macOS Apple Silicon"
+  "url": "https://jazzyrhythmer.github.io/rhythmer-engines/",
+  "target": "macOS Apple Silicon / Windows x64",
+  "formats": [
+    "AU",
+    "VST2",
+    "VST3"
+  ],
+  "formats_by_platform": {
+    "mac": [
+      "AU",
+      "VST2",
+      "VST3"
+    ],
+    "windows": [
+      "VST3"
+    ]
+  }
 }

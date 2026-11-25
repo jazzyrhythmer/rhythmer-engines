@@ -1,0 +1,16 @@
+{
+  "source": "project/src/animation/performance_art.inc",
+  "source_sha256": "6ec2f9601bd1357b873cd44ef165af2697de3863b074d35eaf2aa82793a69523",
+  "copied_source_sha256": "6ec2f9601bd1357b873cd44ef165af2697de3863b074d35eaf2aa82793a69523",
+  "wasm_bytes": 115687,
+  "source_changed": false,
+  "engine_styles": 22,
+  "renderer": "Sample source geometry; browser drawing adapter",
+  "colors": [
+    "#000000",
+    "#ffffff"
+  ],
+  "surface": "Original depth-sorted white fill/stroke alpha restored; monochrome 3D shading",
+  "sha256": "6fd2cbbec7064ab52bb3a4161258eb8ba9254bb0c9ca7f24ccde17d918a3078a",
+  "source_engine_styles": 24
+}

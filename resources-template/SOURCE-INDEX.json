@@ -139,5 +139,25 @@
     "engine": "sophie",
     "repo": "https://github.com/mestela/schwung-sophie",
     "commit": "abd132dc50b43f1f1bd775d3a9faf11e70fb9d9c"
+  },
+  {
+    "engine": "amino",
+    "repo": "https://github.com/klaine/amino",
+    "commit": "cd884906ef1fd08b169f6ca3cbb3993c75c6b36d"
+  },
+  {
+    "engine": "fizzik",
+    "repo": "https://github.com/filliformes/fizzik-move",
+    "commit": "1af291e2fb83477b64dca807430d860a81ce6cc6"
+  },
+  {
+    "engine": "weird-dreams",
+    "repo": "https://github.com/filliformes/weird-dreams-move",
+    "commit": "eabd121d1ffd5d98c077633edeb18df90f85124b"
+  },
+  {
+    "engine": "krautdrums",
+    "repo": "https://github.com/filliformes/krautdrums-move",
+    "commit": "c359afeac8be6396401b1a6d5d9a297f7ed0220a"
   }
 ]

@@ -1,0 +1,15 @@
+{
+  "id": "fizzik",
+  "name": "fizzik",
+  "repo": "https://github.com/filliformes/fizzik-move",
+  "source_commit": "1af291e2fb83477b64dca807430d860a81ce6cc6",
+  "archive_sha256": "6eb0caf06c1165f5d32b65d80faa4f834eaf7124af7e41550612ff3407485068",
+  "license": "MIT",
+  "status": "candidate: not accepted for release",
+  "files": {
+    "LICENSE": "f0204664842b926c1a96a331fe03f61010964366c745ec5f43c055a51fa44020",
+    "README.md": "5ac7194429b30ec09542e1fc8f3b83d0e837b331825fc08cd65bf638ff5b3ce0",
+    "src/dsp/fizzik.c": "c7fd923cec19d2c9c5792cb789bc97af9cb511ac3d1126061a3993b44c792c68",
+    "src/module.json": "eb97a0921ac06297042a3e7b2939cfb200168d588bdbbfc55a73bfe44a84892c"
+  }
+}

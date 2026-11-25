@@ -25,7 +25,10 @@ struct MidiWorkspace {
  static bool supportsDrums(int genre){if(genre<2)return true;const auto&g=rhythmer::gen8_genres[rhythmer::gen_fm1_menu[(genre-2)%rhythmer::gen8_genre_count]];for(auto*cell:g.drums)if(cell&&*cell)return true;return false;}
  static std::array<uint8_t,8> kitKeys(const Json&kit){
   std::array<uint8_t,8>keys{{36,37,38,39,40,41,42,43}};const char*roles[]={"kick","snare","clap","closed_hat","open_hat","tom","rim","percussion"};
-  if(!kit.contains("routes"))return keys;for(int r=0;r<8;r++)for(int p=0;p<int(kit["routes"].size())&&p<16;p++)if(kit["routes"][p].value("mix_role",std::string())==roles[r]){keys[r]=36+p;break;}return keys;
+  if(!kit.contains("routes"))return keys;std::array<bool,8>found{};int cymbal=-1,secondCymbal=-1;
+  for(int p=0;p<int(kit["routes"].size())&&p<16;p++){auto role=kit["routes"][p].value("mix_role",std::string());if(role=="cymbal"){if(cymbal<0)cymbal=p;else if(secondCymbal<0)secondCymbal=p;}for(int r=0;r<8;r++)if(!found[r]&&role==roles[r]){keys[r]=36+p;found[r]=true;}}
+  if(!kit.value("role_fallbacks",false))return keys;
+  if(!found[2]&&found[1])keys[2]=keys[1];if(!found[3]&&cymbal>=0)keys[3]=36+cymbal;if(!found[4]&&cymbal>=0)keys[4]=36+(secondCymbal>=0?secondCymbal:cymbal);if(!found[6]&&found[1])keys[6]=keys[1];return keys;
  }
  Json generate(Json s,bool kit,bool mutate,uint32_t seed,std::array<uint8_t,8>drumKeys={{36,37,38,39,40,41,42,43}}){
   using namespace rhythmer;

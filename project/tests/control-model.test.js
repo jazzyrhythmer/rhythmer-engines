@@ -8,8 +8,8 @@ const c=JSON.parse(fs.readFileSync(path.join(root,'data/sample-catalog.json')));
 let checks=0,programs=0,kitPads=0;const issues=[];
 function check(value,message){checks++;if(!value)issues.push(message);}
 const m=new ControlModel(c);
-check(c.entries.length===20,'20 picker entries');check(c.sources.length===27,'27 source engines');
-check(c.kits.length===36,'36 kits');
+check(c.entries.length===22,'22 picker entries');check(c.sources.length===31,'31 source engines');
+check(c.kits.length===69,'69 kits');
 const ids=new Set();let parameters=0,aliases=0;
 for(const source of c.sources){
  check(source.program_states?.length===source.sounds.length,source.name+' factory state coverage');
@@ -17,7 +17,7 @@ for(const source of c.sources){
  aliases+=(source.native_extra_aliases||[]).length;
  for(const ref of source.program_states||[]){check(ref.values.every(v=>Number.isFinite(v)&&v>=0&&v<=1),'finite source state '+source.id);}
 }
-check(parameters===4228,'all 4,228 source parameters retained');
+check(parameters===4689,'all 4,689 source parameters retained');
 for(const e of c.entries){
  m.selectEngine(e.id);
  check(m.primary().length===8,e.name+' eight primary controls');

@@ -1,0 +1,31 @@
+{
+  "id": "amino",
+  "name": "amino",
+  "repo": "https://github.com/klaine/amino",
+  "source_commit": "cd884906ef1fd08b169f6ca3cbb3993c75c6b36d",
+  "archive_sha256": "8b1c6cd54da00be59105e755dd108e706fe758b7ba724ec04cbf1e97cf90a227",
+  "license": "MIT",
+  "status": "candidate: not accepted for release",
+  "files": {
+    "LICENSE": "007b2aa94e8aba0c1b725fbd0f4464fcf102ab12ee76f000ba43ff541700ac83",
+    "README.md": "72dceb7541478c23462e6e27787f646110dbafad2298d6d32fbb115806fd45ca",
+    "THIRD_PARTY_NOTICES.md": "212eab165512b75d39e45becd143c66542718ac78ab1fc631fe822dac34bcc6f",
+    "src/dsp/amino.c": "8ac7374890eb4fb1d9ae7eb0c558b22ac3152f1ac89fb379fe910a61f4e5dd3a",
+    "src/dsp/amino.h": "491c69d1badeb33ca687c5ed37652d612470f6844750c2f6253fd2cb8319bafd",
+    "src/dsp/contract.h": "9376922d824e946c188fdb5a796f995731addc91257e022d9d6f4b0f65d30276",
+    "src/dsp/contract_gen.c": "304a5584fbce577b81f78c4175cccb11994b823f73fd8024c05f9c71e7d85c1b",
+    "src/dsp/factory_presets.c": "ef835c2bfd0c113f01c087637595e203175dada7dc501ce26fbdbf4681892e07",
+    "src/dsp/factory_presets.h": "01311ad40868a2bb21d30f0598745eec2daef9f92a399bbc9f93da08043e75bf",
+    "src/dsp/fx.c": "67800cc0bb60e84eba1d8b5d23a811c1f2b34d81a83a11a1bba4e0bc843e8496",
+    "src/dsp/move_info.h": "22b88526132847111e4b0f805210025a8250e81adf779d2b718d46e705dc7fe3",
+    "src/dsp/params.c": "c4baeb0d2208dbc870a0ee0b5801243eecdfc2ee4e3db42342a735c8c3760e2c",
+    "src/dsp/params_gen.c": "1511c948a5bbade6abbe873d72e3215e14e3abb3ddb6575dfaf43cdec577ea0a",
+    "src/dsp/params_gen.h": "25dc97d446570e1e6b03b24a01e327d7861a3e3b863431939f809e4e56fe0904",
+    "src/dsp/plugin_api.h": "8ebdc47c34188a5223f5ae765cacd06a399ccfee746cea3e13561ac3835f11aa",
+    "src/dsp/util.h": "4b1c2f2725a73a8016a383fc9184f57ef24b9ce8528a33090301fdabf98eba20",
+    "src/dsp/voice.c": "721f30dfa1e38e678583ecf7a0a3d5df605bb1fb8e612374754c19b817991f3c",
+    "src/dsp/wavetables.c": "b69281c064acb1550ee4ec77e530cab1c2ed37f5fbef7b5068ab88b44fbaad13",
+    "src/dsp/wavetables.h": "81f7d2550355dac4ae19df4bc8e3e288f493a89b45e498d0bb2bb8df35cb0b43",
+    "src/module.json": "2b781fb91c56e82643231b7492a44b610392ac23adbb7e843985437a797d769a"
+  }
+}

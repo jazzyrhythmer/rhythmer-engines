@@ -1,0 +1,17 @@
+{
+  "name": "Fizzik",
+  "vendor": "Vincent Fillion",
+  "uid": "RFiz",
+  "version": 1000,
+  "so": "rhythmer-fizzik.so",
+  "module": "contract.json",
+  "custom_skin": true,
+  "targets": [
+    "aarch64"
+  ],
+  "defines": {
+    "MODULE_SUBDIR": "\"module\"",
+    "HAS_SONG_POS": 1,
+    "FM1_ISOLATED": 1
+  }
+}

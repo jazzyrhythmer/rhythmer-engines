@@ -1,0 +1,66 @@
+{
+    "id": "weird-dreams",
+    "name": "Weird Dreams",
+    "abbrev": "WDRM",
+    "version": "0.2.8",
+    "api_version": 2,
+    "description": "8-voice analog drum machine with 64 kits, 41 voice presets, 96 musical pitch scales, master bus FX, and dynamic pad-selected voice editing",
+    "author": "Vincent Fillion (DSP: Daniele Filaretti, MIT)",
+    "license": "MIT",
+    "dsp": "dsp.so",
+    "component_type": "sound_generator",
+    "raw_midi": true,
+
+    "defaults": {
+        "v1_vol": 0.9, "v2_vol": 0.8, "v3_vol": 0.8, "v4_vol": 0.7,
+        "v5_vol": 0.8, "v6_vol": 0.6, "v7_vol": 0.5, "v8_vol": 0.8,
+        "comp": 0.0, "dj_filter": 0.5,
+        "eq_lo": 0.0, "eq_mid": 0.0, "eq_hi": 0.0,
+        "lo_freq": 200.0, "mid_freq": 1000.0,
+        "master": 0.8,
+        "rev_mix": 0.0, "rev_type": 0, "rev_size": 0.5, "rev_decay": 0.5,
+        "dly_mix": 0.0, "dly_rate": 0.3, "dly_fdbk": 0.3, "dly_tone": 0.5
+    },
+
+    "capabilities": {
+        "audio_out": true,
+        "midi_in": true,
+        "chainable": true,
+        "component_type": "sound_generator",
+
+        "ui_hierarchy": {
+            "levels": {
+                "root": {
+                    "name": "Weird Dreams",
+                    "knobs": ["cv_vol", "cv_pan", "cv_freq", "cv_decay", "cv_wave", "cv_mix", "cv_cutoff", "cv_preset"],
+                    "params": [
+                        {"level": "Patch", "label": "Patch"},
+                        {"level": "General", "label": "General"},
+                        {"level": "Voice", "label": "Voice"},
+                        {"level": "FX", "label": "FX"}
+                    ]
+                },
+                "Patch": {
+                    "label": "Patch",
+                    "knobs": ["kit", "rnd_kit", "rnd_voice", "rnd_pitch", "same_freq", "init_freq", "rnd_pan", "all_mono"],
+                    "params": ["kit", "rnd_kit", "rnd_voice", "rnd_pitch", "same_freq", "init_freq", "rnd_pan", "all_mono"]
+                },
+                "General": {
+                    "label": "General",
+                    "knobs": ["comp", "dj_filter", "eq_lo", "lo_freq", "eq_mid", "mid_freq", "eq_hi", "hi_freq"],
+                    "params": ["comp", "dj_filter", "eq_lo", "lo_freq", "eq_mid", "mid_freq", "eq_hi", "hi_freq", "q_lo", "q_mid", "q_hi", "reset_eq", "master"]
+                },
+                "Voice": {
+                    "label": "Voice",
+                    "knobs": ["cv_vol", "cv_pan", "cv_freq", "cv_decay", "cv_wave", "cv_mix", "cv_cutoff", "cv_preset"],
+                    "params": ["cv_vol", "cv_pan", "cv_freq", "cv_attack", "cv_decay", "cv_wave", "cv_penv", "cv_prate", "cv_lamt", "cv_lrate", "cv_ftype", "cv_cutoff", "cv_fres", "cv_nattack", "cv_ndecay", "cv_mix", "cv_dist", "cv_level", "cv_preset", "cv_rsend", "cv_dsend"]
+                },
+                "FX": {
+                    "label": "FX",
+                    "knobs": ["rev_mix", "rev_type", "rev_size", "rev_decay", "dly_mix", "dly_rate", "dly_fdbk", "dly_tone"],
+                    "params": ["rev_mix", "rev_type", "rev_size", "rev_decay", "dly_mix", "dly_rate", "dly_fdbk", "dly_tone"]
+                }
+            }
+        }
+    }
+}

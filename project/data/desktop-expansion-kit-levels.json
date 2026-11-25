@@ -1,0 +1,4574 @@
+{
+  "schema": 1,
+  "legacy_order": [
+    "DRUM-X",
+    "DRUM-X / 909 CLUB",
+    "DRUM-X / 808 BOOM",
+    "DRUM-X / LOFI DUST",
+    "DRUM-X / INDUSTRIAL",
+    "DRUM-X / ACOUSTIC",
+    "DRUM-X / DUB ROOTS",
+    "DRUM-X / TECHNO RAW",
+    "DRUM-X / BREAKS",
+    "Elixir / Initkit",
+    "Elixir / Dry Circuit",
+    "Elixir / Warm Machine",
+    "Elixir / Bright Logic",
+    "Elixir / Soft Pulse",
+    "Hortator / TRX Classic",
+    "Hortator / 808",
+    "Hortator / 909",
+    "Hortator / Plaits",
+    "Hortator / FM",
+    "Hortator / Industrial",
+    "K-WASUB / 808",
+    "K-WASUB / 909",
+    "K-WASUB / Dub Techno",
+    "K-WASUB / Acoustic",
+    "Sophie",
+    "6W6",
+    "8W8",
+    "9W9",
+    "CW-78",
+    "TR-MPC",
+    "Hortator / MD TRX Deep",
+    "Hortator / MD TRX Tight",
+    "Hortator / MD EFM Metal",
+    "Hortator / MD EFM Pulse",
+    "Hortator / MD Hybrid",
+    "Hortator / MD Percussion"
+  ],
+  "reference": {
+    "name": "K-WASUB / 909",
+    "sample_rate": 44100,
+    "velocity": 127,
+    "phrase_bars": 4,
+    "peak_ceiling": 0.92,
+    "lufs": -10.68,
+    "preserved_source_levels": true
+  },
+  "kits": {
+    "K-WASUB / 909": {
+      "gain": 1,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - FM1 - kwasub-kit - K-WASUB Kit",
+          "sound": "909 / Kick",
+          "role": "kick",
+          "values": {
+            "2": 0.8267716765403748
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - FM1 - kwasub-kit - K-WASUB Kit",
+          "sound": "909 / Snare",
+          "role": "snare",
+          "values": {
+            "6": 0.748031497001648
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - FM1 - kwasub-kit - K-WASUB Kit",
+          "sound": "909 / Clap",
+          "role": "clap",
+          "values": {
+            "10": 0.7086614370346069
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - FM1 - kwasub-kit - K-WASUB Kit",
+          "sound": "909 / Closed Hat",
+          "role": "closed_hat",
+          "values": {
+            "14": 0.6299212574958801
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - FM1 - kwasub-kit - K-WASUB Kit",
+          "sound": "909 / Open Hat",
+          "role": "open_hat",
+          "values": {
+            "18": 0.6141732335090637
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - FM1 - kwasub-kit - K-WASUB Kit",
+          "sound": "909 / Tom",
+          "role": "tom",
+          "values": {
+            "22": 0.748031497001648
+          }
+        },
+        {
+          "source_folder": "Matt Estela - VST - Sophie",
+          "sound": "Rim",
+          "role": "percussion",
+          "values": {
+            "33": 1.0
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - FM1 - kwasub-kit - K-WASUB Kit",
+          "sound": "909 / Cymbal",
+          "role": "cymbal",
+          "values": {
+            "30": 0.5511810779571533
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - FM1 - kwasub-kit - K-WASUB Kit",
+          "sound": "909 / Percussion",
+          "role": "percussion",
+          "values": {
+            "26": 0.6692913174629211
+          }
+        },
+        {
+          "source_folder": "Matt Estela - VST - Sophie",
+          "sound": "Low Tom",
+          "role": "tom",
+          "values": {
+            "113": 1.0
+          }
+        },
+        {
+          "source_folder": "Matt Estela - VST - Sophie",
+          "sound": "Floor Tom",
+          "role": "tom",
+          "values": {
+            "153": 1.0
+          }
+        },
+        {
+          "source_folder": "Matt Estela - VST - Sophie",
+          "sound": "Mid Tom",
+          "role": "tom",
+          "values": {
+            "193": 1.0
+          }
+        },
+        {
+          "source_folder": "Matt Estela - VST - Sophie",
+          "sound": "High Tom",
+          "role": "tom",
+          "values": {
+            "293": 1.0
+          }
+        },
+        {
+          "source_folder": "Matt Estela - VST - Sophie",
+          "sound": "Rim",
+          "role": "percussion",
+          "values": {
+            "33": 1.0
+          }
+        },
+        {
+          "source_folder": "Matt Estela - VST - Sophie",
+          "sound": "Crash",
+          "role": "cymbal",
+          "values": {
+            "273": 1.0
+          }
+        },
+        {
+          "source_folder": "Matt Estela - VST - Sophie",
+          "sound": "Ride",
+          "role": "cymbal",
+          "values": {
+            "313": 1.0
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Default + 808": {
+      "gain": 7.252704780912472,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Default / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Default / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Default / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Default / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Default / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Default / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Default / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Default / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808 / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808 / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808 / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808 / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808 / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808 / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808 / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808 / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / 909 + LinnDrum": {
+      "gain": 10.39920165829059,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909 / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909 / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909 / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909 / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909 / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909 / Mid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909 / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909 / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "LinnDrum / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "LinnDrum / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "LinnDrum / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "LinnDrum / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "LinnDrum / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "LinnDrum / Mid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "LinnDrum / Tamb",
+          "role": "percussion",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "LinnDrum / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        }
+      ]
+    },
+    "Weird Dreams / CR-78 + Techno": {
+      "gain": 7.087613064511827,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CR-78 / Long Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CR-78 / Noise Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CR-78 / Snap Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CR-78 / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CR-78 / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CR-78 / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CR-78 / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CR-78 / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Techno / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Techno / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Techno / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Techno / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Techno / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Techno / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Techno / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Techno / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / House + Electro": {
+      "gain": 7.302978128733655,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "House / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "House / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "House / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "House / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "House / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "House / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "House / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "House / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Electro / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Electro / Noise Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Electro / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Electro / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Electro / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Electro / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Electro / Clave",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Electro / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Hip Hop + Trap": {
+      "gain": 7.353599954754004,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Hip Hop / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Hip Hop / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Hip Hop / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Hip Hop / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Hip Hop / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Hip Hop / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Hip Hop / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Hip Hop / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Trap / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Trap / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Trap / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Trap / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Trap / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Trap / Mid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Trap / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Trap / Sizzle",
+          "role": "percussion",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        }
+      ]
+    },
+    "Weird Dreams / DnB + Dub": {
+      "gain": 9.141132414702504,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DnB / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DnB / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DnB / Snap Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DnB / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DnB / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DnB / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DnB / Tamb",
+          "role": "percussion",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DnB / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dub / Long Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dub / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dub / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dub / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dub / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dub / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dub / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dub / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Garage + Jungle": {
+      "gain": 7.05504844050653,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Garage / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Garage / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Garage / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Garage / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Garage / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Garage / Mid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Garage / Tamb",
+          "role": "percussion",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Garage / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Jungle / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Jungle / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Jungle / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Jungle / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Jungle / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Jungle / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Jungle / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Jungle / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Breakbeat + Reggaetn": {
+      "gain": 10.139113857366794,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Breakbeat / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Breakbeat / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Breakbeat / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Breakbeat / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Breakbeat / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Breakbeat / Mid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Breakbeat / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Breakbeat / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Reggaetn / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Reggaetn / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Reggaetn / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Reggaetn / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Reggaetn / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Reggaetn / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Reggaetn / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Reggaetn / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Afrobeat + Disco": {
+      "gain": 7.022633437357642,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Afrobeat / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Afrobeat / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Afrobeat / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Afrobeat / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Afrobeat / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Afrobeat / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Afrobeat / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Afrobeat / Sizzle",
+          "role": "percussion",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Disco / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Disco / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Disco / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Disco / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Disco / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Disco / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Disco / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Disco / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Funk + New Wave": {
+      "gain": 9.473271845042499,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Funk / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Funk / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Funk / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Funk / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Funk / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Funk / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Funk / Clave",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Funk / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "New Wave / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "New Wave / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "New Wave / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "New Wave / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "New Wave / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "New Wave / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "New Wave / Zap",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "New Wave / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Synthwav + EBM": {
+      "gain": 6.194410750767816,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Synthwav / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Synthwav / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Synthwav / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Synthwav / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Synthwav / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Synthwav / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Synthwav / Clave",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Synthwav / Sizzle",
+          "role": "percussion",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "EBM / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "EBM / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "EBM / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "EBM / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "EBM / Trash HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "EBM / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "EBM / Clave",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "EBM / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Footwork + Gqom": {
+      "gain": 9.671637266500188,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Footwork / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Footwork / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Footwork / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Footwork / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Footwork / Closed HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Footwork / Mid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Footwork / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Footwork / Blip",
+          "role": "percussion",
+          "values": {
+            "7": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Gqom / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Gqom / Noise Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Gqom / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Gqom / Trash HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Gqom / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Gqom / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Gqom / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Gqom / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / JrsyClub + Minimal": {
+      "gain": 11.155781513508526,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "JrsyClub / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "JrsyClub / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "JrsyClub / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "JrsyClub / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "JrsyClub / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "JrsyClub / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "JrsyClub / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "JrsyClub / Blip",
+          "role": "percussion",
+          "values": {
+            "7": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Minimal / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Minimal / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Minimal / Snap Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Minimal / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Minimal / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Minimal / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Minimal / Clave",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Minimal / Sizzle",
+          "role": "percussion",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Industrl + Lo-Fi": {
+      "gain": 5.32721224322962,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Industrl / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Industrl / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Industrl / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Industrl / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Industrl / Trash HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Industrl / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Industrl / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Industrl / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Lo-Fi / Dusty Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Lo-Fi / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Lo-Fi / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Lo-Fi / Trash HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Lo-Fi / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Lo-Fi / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Lo-Fi / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Lo-Fi / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Ambient + Noise": {
+      "gain": 6.729766562843178,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Ambient / Long Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Ambient / Noise Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Ambient / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Ambient / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Ambient / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Ambient / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Ambient / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Ambient / Sizzle",
+          "role": "percussion",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Noise / Dusty Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Noise / Noise Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Noise / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Noise / Trash HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Noise / Trash HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Noise / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Noise / Noise Burst",
+          "role": "percussion",
+          "values": {
+            "4": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Noise / Glitch",
+          "role": "percussion",
+          "values": {
+            "7": 0.6000000238418579
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Glitch + Metal": {
+      "gain": 5.011872336272725,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Glitch / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Glitch / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Glitch / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Glitch / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Glitch / Trash HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Glitch / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Glitch / Zap",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Glitch / Glitch",
+          "role": "percussion",
+          "values": {
+            "7": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Metal / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Metal / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Metal / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Metal / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Metal / Trash HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Metal / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Metal / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Metal / Ride Bell",
+          "role": "percussion",
+          "values": {
+            "7": 0.550000011920929
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Organic + Bright": {
+      "gain": 7.32824533138904,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Organic / Long Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Organic / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Organic / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Organic / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Organic / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Organic / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Organic / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Organic / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Bright / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Bright / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Bright / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Bright / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Bright / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Bright / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Bright / Clave",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Bright / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Dark + Fast": {
+      "gain": 6.73751895470583,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dark / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dark / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dark / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dark / Trash HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dark / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dark / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dark / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dark / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fast / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fast / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fast / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fast / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fast / Closed HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fast / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fast / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fast / Blip",
+          "role": "percussion",
+          "values": {
+            "7": 0.6000000238418579
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Weird + Dusty": {
+      "gain": 5.290539972095819,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Weird / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Weird / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Weird / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Weird / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Weird / Trash HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Weird / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Weird / Zap",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Weird / Glitch",
+          "role": "percussion",
+          "values": {
+            "7": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dusty / Dusty Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dusty / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dusty / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dusty / Trash HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dusty / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dusty / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dusty / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Dusty / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Crispy + Heavy": {
+      "gain": 9.321804703416085,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Crispy / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Crispy / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Crispy / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Crispy / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Crispy / Closed HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Crispy / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Crispy / Clave",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Crispy / Ride Bell",
+          "role": "percussion",
+          "values": {
+            "7": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Heavy / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Heavy / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Heavy / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Heavy / Trash HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Heavy / Trash HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Heavy / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Heavy / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Heavy / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Tight + Loose": {
+      "gain": 11.053504693828435,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tight / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tight / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tight / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tight / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tight / Closed HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tight / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tight / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tight / Ride",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Loose / Long Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Loose / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Loose / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Loose / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Loose / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Loose / Conga",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Loose / Tamb",
+          "role": "percussion",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Loose / Sizzle",
+          "role": "percussion",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Saturatn + Clean": {
+      "gain": 5.2360043658575,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Saturatn / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Saturatn / Crack Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Saturatn / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Saturatn / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Saturatn / Trash HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Saturatn / Acid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Saturatn / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Saturatn / Ride Bell",
+          "role": "percussion",
+          "values": {
+            "7": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clean / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clean / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clean / Snap Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clean / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clean / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clean / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clean / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clean / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Punchy + Muted": {
+      "gain": 10.435181327286239,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Punchy / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Punchy / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Punchy / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Punchy / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Punchy / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Punchy / Mid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Punchy / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Punchy / Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Muted / Dusty Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Muted / Noise Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Muted / Big Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Muted / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Muted / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Muted / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Muted / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Muted / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Fizzy + Thump": {
+      "gain": 5.432503314924333,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fizzy / FM Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fizzy / Noise Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fizzy / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fizzy / Metal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fizzy / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fizzy / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fizzy / Tamb",
+          "role": "percussion",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Fizzy / Sizzle",
+          "role": "percussion",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Thump / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Thump / Fat Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Thump / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Thump / Trash HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Thump / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Thump / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Thump / Cowbell",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Thump / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "7": 0.44999998807907104
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Micro + PercOnly": {
+      "gain": 12.589254117941671,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Micro / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Micro / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Micro / Snap Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Micro / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Micro / Closed HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Micro / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Micro / Clave",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Micro / Blip",
+          "role": "percussion",
+          "values": {
+            "7": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "PercOnly / Rimshot",
+          "role": "snare",
+          "values": {
+            "0": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "PercOnly / Cowbell",
+          "role": "percussion",
+          "values": {
+            "1": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "PercOnly / Shaker",
+          "role": "closed_hat",
+          "values": {
+            "3": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "PercOnly / Conga",
+          "role": "tom",
+          "values": {
+            "5": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "PercOnly / Mid Tom",
+          "role": "tom",
+          "values": {
+            "6": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "PercOnly / Clave",
+          "role": "percussion",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "PercOnly / Tamb",
+          "role": "percussion",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "PercOnly / High Tom",
+          "role": "tom",
+          "values": {
+            "7": 0.75
+          }
+        }
+      ]
+    },
+    "Weird Dreams / FX Only + Clap Lab": {
+      "gain": 5.229979661821558,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "FX Only / Zap",
+          "role": "percussion",
+          "values": {
+            "0": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "FX Only / Glitch",
+          "role": "percussion",
+          "values": {
+            "1": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "FX Only / Blip",
+          "role": "percussion",
+          "values": {
+            "3": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "FX Only / Zap",
+          "role": "percussion",
+          "values": {
+            "5": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "FX Only / Blip",
+          "role": "percussion",
+          "values": {
+            "6": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "FX Only / Drone Hit",
+          "role": "percussion",
+          "values": {
+            "2": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "FX Only / Noise Burst",
+          "role": "percussion",
+          "values": {
+            "4": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "FX Only / Drone Hit",
+          "role": "percussion",
+          "values": {
+            "7": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clap Lab / Clap 808",
+          "role": "clap",
+          "values": {
+            "0": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clap Lab / Tight Clap",
+          "role": "clap",
+          "values": {
+            "1": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clap Lab / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clap Lab / Clap 808",
+          "role": "clap",
+          "values": {
+            "5": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clap Lab / Tight Clap",
+          "role": "clap",
+          "values": {
+            "6": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clap Lab / Big Clap",
+          "role": "clap",
+          "values": {
+            "2": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clap Lab / Snap Clap",
+          "role": "clap",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Clap Lab / Big Clap",
+          "role": "clap",
+          "values": {
+            "7": 0.6499999761581421
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Tom Rack + HH Stack": {
+      "gain": 6.870684400142321,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom Rack / Low Tom",
+          "role": "tom",
+          "values": {
+            "0": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom Rack / Mid Tom",
+          "role": "tom",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom Rack / Acid Tom",
+          "role": "tom",
+          "values": {
+            "3": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom Rack / Low Tom",
+          "role": "tom",
+          "values": {
+            "5": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom Rack / Mid Tom",
+          "role": "tom",
+          "values": {
+            "6": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom Rack / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom Rack / Conga",
+          "role": "tom",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom Rack / High Tom",
+          "role": "tom",
+          "values": {
+            "7": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "HH Stack / Closed HH",
+          "role": "percussion",
+          "values": {
+            "0": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "HH Stack / Open HH",
+          "role": "percussion",
+          "values": {
+            "1": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "HH Stack / Metal HH",
+          "role": "percussion",
+          "values": {
+            "3": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "HH Stack / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "HH Stack / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "HH Stack / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "2": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "HH Stack / Trash HH",
+          "role": "percussion",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "HH Stack / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        }
+      ]
+    },
+    "Weird Dreams / CymbWash + KickArmy": {
+      "gain": 5.76102818559856,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CymbWash / Crash",
+          "role": "percussion",
+          "values": {
+            "0": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CymbWash / Ride",
+          "role": "percussion",
+          "values": {
+            "1": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CymbWash / Dark Crash",
+          "role": "percussion",
+          "values": {
+            "3": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CymbWash / Crash",
+          "role": "percussion",
+          "values": {
+            "5": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CymbWash / Ride",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CymbWash / Ride Bell",
+          "role": "percussion",
+          "values": {
+            "2": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CymbWash / Sizzle",
+          "role": "percussion",
+          "values": {
+            "4": 0.4000000059604645
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "CymbWash / Ride Bell",
+          "role": "percussion",
+          "values": {
+            "7": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "KickArmy / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "KickArmy / Punch Kick",
+          "role": "kick",
+          "values": {
+            "1": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "KickArmy / Dusty Kick",
+          "role": "kick",
+          "values": {
+            "3": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "KickArmy / Sub Kick",
+          "role": "kick",
+          "values": {
+            "5": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "KickArmy / Punch Kick",
+          "role": "kick",
+          "values": {
+            "6": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "KickArmy / FM Kick",
+          "role": "kick",
+          "values": {
+            "2": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "KickArmy / Long Kick",
+          "role": "kick",
+          "values": {
+            "4": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "KickArmy / FM Kick",
+          "role": "kick",
+          "values": {
+            "7": 0.8500000238418579
+          }
+        }
+      ]
+    },
+    "Weird Dreams / SnrRack + Kick+Prc": {
+      "gain": 12.445146117713852,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "SnrRack / Snare",
+          "role": "snare",
+          "values": {
+            "0": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "SnrRack / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "SnrRack / Crack Snare",
+          "role": "snare",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "SnrRack / Snare",
+          "role": "snare",
+          "values": {
+            "5": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "SnrRack / Snap Snare",
+          "role": "snare",
+          "values": {
+            "6": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "SnrRack / Fat Snare",
+          "role": "snare",
+          "values": {
+            "2": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "SnrRack / Noise Snare",
+          "role": "snare",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "SnrRack / Fat Snare",
+          "role": "snare",
+          "values": {
+            "7": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Kick+Prc / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Kick+Prc / Punch Kick",
+          "role": "kick",
+          "values": {
+            "1": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Kick+Prc / Cowbell",
+          "role": "kick",
+          "values": {
+            "3": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Kick+Prc / Shaker",
+          "role": "kick",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Kick+Prc / Tamb",
+          "role": "kick",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Kick+Prc / Rimshot",
+          "role": "kick",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Kick+Prc / Clave",
+          "role": "kick",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Kick+Prc / Conga",
+          "role": "kick",
+          "values": {
+            "7": 0.699999988079071
+          }
+        }
+      ]
+    },
+    "Weird Dreams / Snare+FX + Tom+Cymb": {
+      "gain": 11.207274261366482,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Snare+FX / Snare",
+          "role": "snare",
+          "values": {
+            "0": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Snare+FX / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Snare+FX / Crack Snare",
+          "role": "snare",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Snare+FX / Glitch",
+          "role": "snare",
+          "values": {
+            "5": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Snare+FX / Blip",
+          "role": "snare",
+          "values": {
+            "6": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Snare+FX / Fat Snare",
+          "role": "snare",
+          "values": {
+            "2": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Snare+FX / Zap",
+          "role": "snare",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Snare+FX / Noise Burst",
+          "role": "snare",
+          "values": {
+            "7": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom+Cymb / Low Tom",
+          "role": "tom",
+          "values": {
+            "0": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom+Cymb / Mid Tom",
+          "role": "tom",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom+Cymb / Crash",
+          "role": "tom",
+          "values": {
+            "3": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom+Cymb / Ride Bell",
+          "role": "tom",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom+Cymb / Dark Crash",
+          "role": "tom",
+          "values": {
+            "6": 0.44999998807907104
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom+Cymb / High Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom+Cymb / Ride",
+          "role": "tom",
+          "values": {
+            "4": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Tom+Cymb / Sizzle",
+          "role": "tom",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        }
+      ]
+    },
+    "Weird Dreams / 808+FX + 909+Perc": {
+      "gain": 6.60693448007596,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808+FX / Sub Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.949999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808+FX / Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808+FX / Clap 808",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808+FX / Closed HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808+FX / Glitch",
+          "role": "percussion",
+          "values": {
+            "6": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808+FX / Low Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808+FX / Zap",
+          "role": "percussion",
+          "values": {
+            "4": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "808+FX / Drone Hit",
+          "role": "percussion",
+          "values": {
+            "7": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909+Perc / Punch Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909+Perc / Snap Snare",
+          "role": "snare",
+          "values": {
+            "1": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909+Perc / Tight Clap",
+          "role": "clap",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909+Perc / Cowbell",
+          "role": "percussion",
+          "values": {
+            "5": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909+Perc / Clave",
+          "role": "percussion",
+          "values": {
+            "6": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909+Perc / Mid Tom",
+          "role": "tom",
+          "values": {
+            "2": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909+Perc / Rimshot",
+          "role": "snare",
+          "values": {
+            "4": 0.75
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "909+Perc / Tamb",
+          "role": "percussion",
+          "values": {
+            "7": 0.5
+          }
+        }
+      ]
+    },
+    "Weird Dreams / DroneKit + Chaos": {
+      "gain": 5.11093079037391,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DroneKit / Long Kick",
+          "role": "kick",
+          "values": {
+            "0": 0.8999999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DroneKit / Drone Hit",
+          "role": "percussion",
+          "values": {
+            "1": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DroneKit / Noise Burst",
+          "role": "percussion",
+          "values": {
+            "3": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DroneKit / Pedal HH",
+          "role": "percussion",
+          "values": {
+            "5": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DroneKit / Open HH",
+          "role": "percussion",
+          "values": {
+            "6": 0.5
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DroneKit / Drone Hit",
+          "role": "percussion",
+          "values": {
+            "2": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DroneKit / Drone Hit",
+          "role": "percussion",
+          "values": {
+            "4": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "DroneKit / Sizzle",
+          "role": "percussion",
+          "values": {
+            "7": 0.4000000059604645
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Chaos / Zap",
+          "role": "percussion",
+          "values": {
+            "0": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Chaos / Glitch",
+          "role": "percussion",
+          "values": {
+            "1": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Chaos / Blip",
+          "role": "percussion",
+          "values": {
+            "3": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Chaos / Dirty Clap",
+          "role": "clap",
+          "values": {
+            "5": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Chaos / Glitch",
+          "role": "percussion",
+          "values": {
+            "6": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Chaos / Drone Hit",
+          "role": "percussion",
+          "values": {
+            "2": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Chaos / Noise Burst",
+          "role": "percussion",
+          "values": {
+            "4": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - weird-dreams - Weird Dreams",
+          "sound": "Chaos / Zap",
+          "role": "percussion",
+          "values": {
+            "7": 0.699999988079071
+          }
+        }
+      ]
+    },
+    "KrautDrums": {
+      "gain": 128,
+      "pads": [
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Bass-drum",
+          "role": "kick",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Snare",
+          "role": "snare",
+          "values": {
+            "5": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Snare 2",
+          "role": "snare",
+          "values": {
+            "5": 0.800000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Short cym",
+          "role": "percussion",
+          "values": {
+            "7": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Long cym",
+          "role": "percussion",
+          "values": {
+            "7": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Tom 1",
+          "role": "tom",
+          "values": {
+            "2": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Claves",
+          "role": "percussion",
+          "values": {
+            "4": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Mid cym",
+          "role": "percussion",
+          "values": {
+            "7": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Conga",
+          "role": "tom",
+          "values": {
+            "1": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Tom 2",
+          "role": "tom",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Cow Bell",
+          "role": "percussion",
+          "values": {
+            "6": 0.6000000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Bass 2",
+          "role": "percussion",
+          "values": {
+            "0": 0.8500000238418579
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Tom 3",
+          "role": "tom",
+          "values": {
+            "3": 0.699999988079071
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Conga 2",
+          "role": "tom",
+          "values": {
+            "1": 0.6499999761581421
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Claves 2",
+          "role": "percussion",
+          "values": {
+            "4": 0.550000011920929
+          }
+        },
+        {
+          "source_folder": "RHYTHMER - Move - krautdrums - KrautDrums",
+          "sound": "Cow Bell 2",
+          "role": "percussion",
+          "values": {
+            "6": 0.6000000238418579
+          }
+        }
+      ]
+    }
+  }
+}

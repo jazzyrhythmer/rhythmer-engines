@@ -1,0 +1,17 @@
+{
+  "name": "Amino",
+  "vendor": "klaine",
+  "uid": "RAmi",
+  "version": 1000,
+  "so": "rhythmer-amino.so",
+  "module": "contract.json",
+  "custom_skin": true,
+  "targets": [
+    "aarch64"
+  ],
+  "defines": {
+    "MODULE_SUBDIR": "\"module\"",
+    "HAS_SONG_POS": 1,
+    "FM1_ISOLATED": 1
+  }
+}

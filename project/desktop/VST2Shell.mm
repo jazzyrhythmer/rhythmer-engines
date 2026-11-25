@@ -35,7 +35,7 @@ public:
  case effCanDo:if(!ptr)return 0;if(!std::strcmp((const char*)ptr,"hasCockosViewAsConfig")||!std::strcmp((const char*)ptr,"hasCockosExtensions"))return (int32_t)0xbeef0000;if(!std::strcmp((const char*)ptr,"receiveVstEvents")||!std::strcmp((const char*)ptr,"receiveVstMidiEvent")||!std::strcmp((const char*)ptr,"receiveVstTimeInfo"))return 1;return 0;
  case effGetTailSize:return VstIntPtr(p.getTailLengthSeconds()*s.rate);
  default:return 0;}}
- static void render(AEffect*e,float**,float**out,int n){auto&s=*(Shell*)e->object;juce::AudioBuffer<float>b(out,2,n);s.processor->processBlock(b,s.midi);s.midi.clear();}
+ static void render(AEffect*e,float**,float**out,int n){auto&s=*(Shell*)e->object;const juce::ScopedLock lock(s.processor->getCallbackLock());juce::AudioBuffer<float>b(out,2,n);s.processor->processBlock(b,s.midi);s.midi.clear();}
  juce::Optional<PositionInfo>getPosition()const override{PositionInfo p;if(host){auto*t=(VstTimeInfo*)host((AEffect*)&effect,audioMasterGetTime,0,0x7fff,nullptr,0);if(t){p.setIsPlaying((t->flags&kVstTransportPlaying)!=0);p.setIsRecording((t->flags&kVstTransportRecording)!=0);if(t->flags&kVstTempoValid)p.setBpm(t->tempo);if(t->flags&kVstPpqPosValid)p.setPpqPosition(t->ppqPos);p.setTimeInSamples(int64_t(t->samplePos));p.setTimeSignature(juce::AudioPlayHead::TimeSignature{t->timeSigNumerator,t->timeSigDenominator});}}return p;}
  void audioProcessorParameterChanged(juce::AudioProcessor*,int i,float v)override{if(host)host(&effect,audioMasterAutomate,i,0,nullptr,v);}
  void audioProcessorChanged(juce::AudioProcessor*,const ChangeDetails&)override{effect.initialDelay=processor->getLatencySamples();if(host)host(&effect,audioMasterUpdateDisplay,0,0,nullptr,0);}

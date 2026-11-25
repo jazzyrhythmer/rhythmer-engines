@@ -75,9 +75,22 @@ inline std::string baseNameOf(const std::string& p)
     return i == std::string::npos ? p : p.substr(i + 1);
 }
 
+inline std::FILE* openResourceFile(const std::string& path)
+{
+#if defined(_WIN32)
+    int count=MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,path.c_str(),-1,nullptr,0);
+    if(count<=0)return nullptr;
+    std::vector<wchar_t> wide(size_t(count),L'\0');
+    if(!MultiByteToWideChar(CP_UTF8,MB_ERR_INVALID_CHARS,path.c_str(),-1,wide.data(),count))return nullptr;
+    return _wfopen(wide.data(),L"rb");
+#else
+    return std::fopen(path.c_str(),"rb");
+#endif
+}
+
 inline bool fileExists(const std::string& p)
 {
-    std::FILE* f = std::fopen(p.c_str(), "rb");
+    std::FILE* f = openResourceFile(p);
     if (f == nullptr) return false;
     std::fclose(f);
     return true;
@@ -88,12 +101,13 @@ inline std::string libraryPath()
 {
 #if defined(_WIN32)
     HMODULE mod = nullptr;
-    if (!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                            reinterpret_cast<LPCSTR>(&resourceAnchor), &mod))
-        return std::string();
-    char buf[4096];
-    DWORD n = GetModuleFileNameA(mod, buf, (DWORD)sizeof(buf));
-    return n > 0 && n < sizeof(buf) ? normaliseSlashes(std::string(buf, n)) : std::string();
+    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                            reinterpret_cast<LPCWSTR>(&resourceAnchor), &mod))return {};
+    wchar_t buf[32768];DWORD n=GetModuleFileNameW(mod,buf,32768);
+    if(!n||n>=32768)return {};
+    int size=WideCharToMultiByte(CP_UTF8,0,buf,int(n),nullptr,0,nullptr,nullptr);std::string path(size_t(size),'\0');
+    if(size>0)WideCharToMultiByte(CP_UTF8,0,buf,int(n),path.data(),size,nullptr,nullptr);
+    return normaliseSlashes(path);
 #else
     std::string result;
   #if defined(__linux__)
@@ -186,7 +200,7 @@ inline std::string contentPath(const std::string& relative)
 inline bool readFile(const std::string& path, std::vector<uint8_t>& out)
 {
     out.clear();
-    std::FILE* f = std::fopen(path.c_str(), "rb");
+    std::FILE* f = detail::openResourceFile(path);
     if (f == nullptr) return false;
     uint8_t buf[16384];
     size_t n;

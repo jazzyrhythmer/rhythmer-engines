@@ -1,0 +1,14 @@
+{
+  "id": "weird-dreams",
+  "name": "weird-dreams",
+  "repo": "https://github.com/filliformes/weird-dreams-move",
+  "source_commit": "eabd121d1ffd5d98c077633edeb18df90f85124b",
+  "archive_sha256": "e865075df4933617ffac0f39616e1b221d69d6a19a3d4bcbc3b606277d1e4b6b",
+  "license": "MIT",
+  "status": "candidate: not accepted for release",
+  "files": {
+    "README.md": "f09f53ed6347f32e0843f979066766a268f89161f881522c6d0eb2a5a2ab1647",
+    "src/dsp/weird_dreams.c": "74bbb7b864943a57b184185b514e6ce9ab82aefd81dccb7ed3bce87a8f6e4650",
+    "src/module.json": "d40b3902bafc36055f24390ea6b6aa4f4101312c8ffbbcdfe64ae223d1c5b21b"
+  }
+}

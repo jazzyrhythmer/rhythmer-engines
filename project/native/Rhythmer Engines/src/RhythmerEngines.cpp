@@ -37,7 +37,7 @@ class Cell {
  void refreshModel(){float l[128]{},r[128]{};core->render(l,r,128);for(int i=0;i<count;i++){values[i]=core->get(i);names[i]=core->name(i);}}
  void set(int p,float v){if(p>=0&&p<count){core->set(p,v);float actual=core->get(p);values[p].store(actual,std::memory_order_relaxed);if(p==nativePitch)drum=actual<.5f;}}
  void syncValues(){for(int i:persist)if(i<count)values[i].store(core->get(i),std::memory_order_relaxed);}
- void copySound(const Cell&other){for(int index:other.persist)set(index,other.values[index].load());for(int index:voiceOverrides)set(index,other.values[index].load());}
+ void copySound(const Cell&other){for(int index:other.persist)if(std::fabs(core->get(index)-other.values[index].load())>1e-6f)set(index,other.values[index].load());for(int index:voiceOverrides)if(std::fabs(core->get(index)-other.values[index].load())>1e-6f)set(index,other.values[index].load());}
  void midi(uint8_t status,uint8_t key,uint8_t vel,bool kit){
   auto hi=status&0xf0;if(hi==0x90&&vel)silenced=false;if(hi==0xb0&&key==120)silenced=true;
   if(hi==0xb0&&(key==120||key==123))held.fill(false);
@@ -74,10 +74,10 @@ struct Graph {
   if(filter&&(cutoff<.9999f||res>.0001f||type!=0)){float hz=20*std::pow(1000.f,cutoff);for(auto&f:filters)f.set(hz,std::min(res,.95f));for(unsigned i=0;i<n;i++){l[i]=filters[0].process(l[i],type);r[i]=filters[1].process(r[i],type);}}
   if(isKit){if(kitGain!=1)for(unsigned i=0;i<n;i++){l[i]*=kitGain;r[i]*=kitGain;}kitOutput.process(l,r,n);}
  }
- Json snapshot(){Json x={{"kit_name",kitName},{"kit_gain",kitGain},{"entry",entry},{"program",program},{"kit",kit},{"common",{common[0].load(),common[1].load(),common[2].load()}},{"cells",Json::array()}};for(auto&c:cells){Json values=Json::array();for(int i=0;i<c->count;i++)values.push_back(nullptr);for(int i:c->persist)if(i<c->count&&!c->names[i].empty()&&c->names[i].rfind("Unused",0)!=0&&c->names[i].rfind("Inactive Parameter",0)!=0)values[i]=c->values[i].load();x["cells"].push_back({{"source",c->source},{"origin",c->origin},{"preset",c->preset},{"values",values}});}return x;}
+ Json snapshot(){Json x={{"kit_name",kitName},{"kit_gain",kitGain},{"entry",entry},{"program",program},{"kit",kit},{"common",{common[0].load(),common[1].load(),common[2].load()}},{"cells",Json::array()}};for(auto&c:cells){Json values=Json::array();for(int i=0;i<c->count;i++)values.push_back(nullptr);for(int i:c->persist)if(i<c->count&&!c->names[i].empty()&&c->names[i].rfind("Unused",0)!=0&&c->names[i].rfind("Inactive Parameter",0)!=0)values[i]=c->values[i].load();x["cells"].push_back({{"source",c->source},{"origin",c->origin},{"preset",c->preset},{"values",values},{"native_state",c->core->state()}});}return x;}
 };
 struct Visible {int cell=0,index=-1;Json metadata;std::string name,group;};
-constexpr int ControlSlots=40,NewControls=89,NewPages=113,KitRoot=116,OpenBrowser=117,BrowserPage=124,BrowserClose=125,BrowserRow=126,BrowserText=142,BrowserTail=158,BrowserPrev=174,BrowserNext=175,BrowserTitle=176,BrowserVisible=177,BrowserInfo=178,TotalParameters=179;
+constexpr int ControlSlots=40,NewControls=89,NewPages=113,KitRoot=116,OpenBrowser=117,BrowserPage=124,BrowserClose=125,BrowserRow=126,BrowserText=142,BrowserTail=158,BrowserPrev=174,BrowserNext=175,BrowserTitle=176,BrowserVisible=177,BrowserInfo=178,TotalParameters=185;
 inline int controlParameter(int slot){return slot<16?6+slot:NewControls+slot-16;}
 inline int controlSlot(int parameter){return parameter>=6&&parameter<=21?parameter-6:parameter>=NewControls&&parameter<NewPages?parameter-NewControls+16:-1;}
 struct View {std::array<std::string,ControlSlots>names{},text{};std::array<int,3>sectionPages{1,1,1},sectionPage{};std::array<std::string,3>sectionGroup{};std::vector<std::string>presetNames;std::vector<std::string>padSoundNames;std::array<std::string,16>padLabels{};std::string program,group,status="Loading";int pages=1,page=0;};
@@ -88,7 +88,7 @@ class RhythmerEngines:public mpc::Plugin {
  struct FactoryProgram { int entry,preset;std::string name; };
  std::vector<FactoryProgram>factoryPrograms_;std::array<std::atomic<bool>,TotalParameters>hostDirty_{};
  struct BrowserView {std::array<std::string,16>rows{};std::string title;int page=0,pages=1,count=0;};BrowserView browserView_;std::mutex browserMutex_;std::atomic<int>browserKind_{0},browserPick_{-1},browserStep_{0};std::atomic<unsigned>browserRevision_{1};unsigned browserShown_=0;
- Json catalog_;std::vector<int>presetParams_;std::array<int,27>padSoundParams_;std::vector<int>sourcePicker_;std::string coresFolder_;
+ Json catalog_;std::vector<int>presetParams_;std::vector<int>padSoundParams_;std::vector<int>sourcePicker_;std::string coresFolder_;
  std::atomic<Graph*>active_{nullptr},hazard_{nullptr};std::vector<std::unique_ptr<Graph>>graphs_;
  std::atomic<float>motionPhase_{0};std::atomic<bool>quit_{false};std::thread worker_;std::mutex viewMutex_,restoreMutex_,graphsMutex_;View view_;Json restore_;bool restorePending_=false;
  std::atomic<int>requestedSource_{-1},requestedSound_{-1},requestedPad_{0};std::atomic<unsigned>contextRev_{1},layoutRev_{1};unsigned generation_=0;
@@ -145,7 +145,7 @@ class RhythmerEngines:public mpc::Plugin {
  void layout(Graph&g){
   auto controls=visible(g);std::vector<std::vector<Visible>>pages;std::string group;std::vector<Visible>*current=nullptr;
   const char*section=getInt(Family)==1?"SOUND":getInt(Family)==2?"MOD":getInt(Family)==3?"FX":"ALL";
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
   pages=compactControlPages(controls,section);
 #else
   for(auto&p:controls){if(std::string(section)!="ALL"&&p.metadata.value("section","SOUND")!=section)continue;if(!current||group!=p.group||current->size()==8){pages.emplace_back();current=&pages.back();group=p.group;}current->push_back(p);}
@@ -170,7 +170,7 @@ if(g.isKit){for(const auto&k:catalog_["kits"])next.presetNames.push_back(k["name
   if(g.isKit)next.program=catalog_["kits"][g.kit]["name"];else{int origin=catalog_["entries"][g.entry]["source_index"];next.program=catalog_["sources"][origin]["sounds"][g.program]["name"];}
   for(int slot=0;slot<ControlSlots;slot++){
    const std::vector<Visible>empty;int bank=(slot-16)/8;const auto&list=slot<8?main:slot<16?(pages.empty()?empty:pages[page]):(sectionLists[bank].empty()?empty:sectionLists[bank][next.sectionPage[bank]]);int at=slot%8;
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
    const auto&desktopList=(slot>=16&&slot<24)?(pages.empty()?empty:pages[page]):list;
    if(slot>=16&&slot<24)at+=8;
 #else
@@ -192,11 +192,15 @@ if(presetParams_[g.entry]>=0)quietSet(presetParams_[g.entry],g.program);
  }
  void restoreGraph(Graph&g,const Json&state){if(state.value("entry",-1)!=g.entry)return;
   if(state.contains("common"))for(int i=0;i<3;i++)g.common[i]=state["common"][i].get<float>();
-  if(state.contains("cells"))for(size_t k=0;k<g.cells.size()&&k<state["cells"].size();k++){auto&c=*g.cells[k];const auto&s=state["cells"][k];if(s.value("source",-1)!=c.source)continue;// Persist only canonical sound controls, never focus-dependent helper aliases.
-   for(const auto&p:catalog_["sources"][c.source]["parameters"]){int i=p["index"];if(std::find(c.persist.begin(),c.persist.end(),i)!=c.persist.end()&&i<c.count&&i<int(s["values"].size())&&!s["values"][i].is_null())c.set(i,s["values"][i]);}
+  if(state.contains("cells"))for(size_t k=0;k<g.cells.size()&&k<state["cells"].size();k++){auto&c=*g.cells[k];const auto&s=state["cells"][k];if(s.value("source",-1)!=c.source)continue;
+   // Native state carries layered/model-specific data that the currently visible
+   // normalized control bank cannot represent (for example all Amino layers).
+   if(s.contains("native_state")&&s["native_state"].is_array()&&s["native_state"].size()<=32*1024*1024)c.core->restore(s["native_state"].get<std::vector<uint8_t>>());
+   // Persist only canonical sound controls, never focus-dependent helper aliases.
+   for(const auto&p:catalog_["sources"][c.source]["parameters"]){int i=p["index"];if(std::find(c.persist.begin(),c.persist.end(),i)!=c.persist.end()&&i<c.count&&i<int(s["values"].size())&&!s["values"][i].is_null()&&std::fabs(c.core->get(i)-s["values"][i].get<float>())>1e-6f)c.set(i,s["values"][i]);}
    // Original Prophet native patch edits accept their allocator defaults. Apply
    // saved track overrides last, after all native patch controls are restored.
-   for(int i:c.voiceOverrides)if(i<int(s["values"].size())&&!s["values"][i].is_null())c.set(i,s["values"][i]);c.refreshModel();}
+   for(int i:c.voiceOverrides)if(i<int(s["values"].size())&&!s["values"][i].is_null()&&std::fabs(c.core->get(i)-s["values"][i].get<float>())>1e-6f)c.set(i,s["values"][i]);c.refreshModel();}
 
  }
  void closeBrowser(){browserKind_=0;quietSet(BrowserVisible,0);for(int i=0;i<7;i++)quietSet(OpenBrowser+i,0);browserRevision_++;layoutRev_++;}
@@ -231,9 +235,15 @@ if(presetParams_[g.entry]>=0)quietSet(presetParams_[g.entry],g.program);
  }
  public:
  RhythmerEngines():Plugin(info()){
-  std::ifstream f(mpc::contentPath("catalog.json"));if(!f)throw std::runtime_error("Missing Rhythmer catalog");f>>catalog_;
-#ifdef __APPLE__
-  coresFolder_=mpc::contentPath("Engines/mac");
+  std::string catalogText;if(!mpc::readTextFile(mpc::contentPath("catalog.json"),catalogText))throw std::runtime_error("Missing Rhythmer catalog");catalog_=Json::parse(catalogText);
+#if defined(__APPLE__) || defined(_WIN32)
+  coresFolder_=mpc::contentPath(
+#ifdef _WIN32
+   "Engines/windows"
+#else
+   "Engines/mac"
+#endif
+  );
 #else
   coresFolder_=mpc::contentPath(sizeof(void*)==4?"Engines/arm32":"Engines/arm64");
 #endif
@@ -242,15 +252,18 @@ if(presetParams_[g.entry]>=0)quietSet(presetParams_[g.entry],g.program);
   for(int i=0;i<16;i++){auto p=mpc::floatParam(("control_"+std::to_string(i)).c_str(),("Control "+std::to_string(i+1)).c_str(),0,1,0);p.automatable=false;addParam(p);}
   addParam(mpc::choiceParam("kit","Kit Preset",kits));addParam(mpc::choiceParam("pad_source","Pad Engine",sources));addParam(mpc::intParam("pad_sound","Pad Sound",0,2047,0));auto visual=mpc::floatParam("visual","Motion",0,1,0);visual.automatable=false;addParam(visual);auto status=mpc::intParam("status","Status",0,1,0);status.automatable=false;addParam(status);auto panic=mpc::boolParam("panic","STOP SOUND",false);panic.automatable=false;addParam(panic);
   if(numParams()!=Count)throw std::runtime_error("Parameter schema mismatch");
-  presetParams_.assign(catalog_["entries"].size(),-1);padSoundParams_.fill(-1);
-  for(int i=0;i<int(catalog_["entries"].size());i++)if(catalog_["entries"][i]["kind"]=="source"){int source=catalog_["entries"][i]["source_index"];std::vector<std::string>names;for(const auto&p:catalog_["sources"][source]["sounds"])names.push_back(p["name"]);auto id="preset_entry_"+std::to_string(i),label="Preset / "+catalog_["entries"][i]["name"].get<std::string>();auto p=mpc::choiceParam(id.c_str(),label.c_str(),names);p.automatable=false;presetParams_[i]=addParam(p);}
-  for(int i:sourcePicker_){std::vector<std::string>names;for(const auto&p:catalog_["sources"][i]["sounds"])names.push_back(p["name"]);auto id="pad_sound_source_"+std::to_string(i),label="Pad Sound / "+catalog_["sources"][i]["name"].get<std::string>();auto p=mpc::choiceParam(id.c_str(),label.c_str(),names);p.automatable=false;padSoundParams_[i]=addParam(p);}
+  presetParams_.assign(catalog_["entries"].size(),-1);padSoundParams_.assign(catalog_["sources"].size(),-1);
+  for(int i=0;i<std::min(20,int(catalog_["entries"].size()));i++)if(catalog_["entries"][i]["kind"]=="source"){int source=catalog_["entries"][i]["source_index"];std::vector<std::string>names;for(const auto&p:catalog_["sources"][source]["sounds"])names.push_back(p["name"]);auto id="preset_entry_"+std::to_string(i),label="Preset / "+catalog_["entries"][i]["name"].get<std::string>();auto p=mpc::choiceParam(id.c_str(),label.c_str(),names);p.automatable=false;presetParams_[i]=addParam(p);}
+  for(int i:sourcePicker_)if(i<27){std::vector<std::string>names;for(const auto&p:catalog_["sources"][i]["sounds"])names.push_back(p["name"]);auto id="pad_sound_source_"+std::to_string(i),label="Pad Sound / "+catalog_["sources"][i]["name"].get<std::string>();auto p=mpc::choiceParam(id.c_str(),label.c_str(),names);p.automatable=false;padSoundParams_[i]=addParam(p);}
   padLabelsBase_=numParams();for(int i=0;i<16;i++){auto p=mpc::floatParam(("pad_label_"+std::to_string(i)).c_str(),("Pad "+std::to_string(i+1)+" Sound").c_str(),0,1,0);p.automatable=false;addParam(p);}
   for(int bank=0;bank<3;bank++)for(int slot=0;slot<8;slot++){std::string id=std::array<std::string,3>{"edit_sound_","edit_mod_","edit_fx_"}[bank]+std::to_string(slot),name=std::array<std::string,3>{"Sound Control ","Mod Control ","FX Control "}[bank]+std::to_string(slot+1);auto p=mpc::floatParam(id.c_str(),name.c_str(),0,1,0);p.automatable=false;addParam(p);}
   for(int bank=0;bank<3;bank++){auto id=std::array<const char*,3>{"sound_page","mod_page","fx_page"}[bank],name=std::array<const char*,3>{"Sound Page","Mod Page","FX Page"}[bank];auto p=mpc::intParam(id,name,0,511,0);p.automatable=false;addParam(p);}addUI(mpc::intParam("kit_midi_root","Kit MIDI Root",0,112,60));for(int i=0;i<7;i++){auto id="browser_open_"+std::to_string(i);auto p=mpc::boolParam(id.c_str(),"Open browser",false);p.automatable=false;addParam(p);}addUI(mpc::intParam("browser_page","Browser Page",0,127,0));addUI(mpc::boolParam("browser_close","Close browser",false));
   for(int i=0;i<16;i++){auto id="browser_pick_"+std::to_string(i);auto p=mpc::boolParam(id.c_str(),"Choose sound",false);p.automatable=false;addParam(p);}
   for(int part=0;part<2;part++)for(int i=0;i<16;i++){auto id="browser_label_"+std::to_string(part)+"_"+std::to_string(i);auto p=mpc::floatParam(id.c_str(),"Browser sound",0,1,0);p.automatable=false;addParam(p);}
   addUI(mpc::boolParam("browser_prev","Previous page",false));addUI(mpc::boolParam("browser_next","Next page",false));addUI(mpc::floatParam("browser_title","Browser title",0,1,0));addUI(mpc::boolParam("browser_visible","Browser visible",false));addUI(mpc::floatParam("browser_info","Browser information",0,1,0));
+  // Keep all legacy parameter IDs (0..178). Append expansion selectors.
+  for(int i=20;i<int(catalog_["entries"].size());++i){int source=catalog_["entries"][i]["source_index"];std::vector<std::string>names;for(const auto& sound:catalog_["sources"][source]["sounds"])names.push_back(sound["name"]);auto id="preset_entry_"+std::to_string(i),label="Preset / "+catalog_["entries"][i]["name"].get<std::string>();auto p=mpc::choiceParam(id.c_str(),label.c_str(),names);p.automatable=false;presetParams_[i]=addParam(p);}
+  for(int i:sourcePicker_)if(i>=27){std::vector<std::string>names;for(const auto& sound:catalog_["sources"][i]["sounds"])names.push_back(sound["name"]);auto id="pad_sound_source_"+std::to_string(i),label="Pad Sound / "+catalog_["sources"][i]["name"].get<std::string>();auto p=mpc::choiceParam(id.c_str(),label.c_str(),names);p.automatable=false;padSoundParams_[i]=addParam(p);}
   if(numParams()!=TotalParameters)throw std::runtime_error("Extended parameter schema");
   // MPC's native PRESET selector chooses the instrument engine. Source sound
   // banks remain inside the skin; program count and names stay fixed at load.
@@ -301,14 +314,14 @@ if(presetParams_[g.entry]>=0)quietSet(presetParams_[g.entry],g.program);
   restorePending_=true;loadingRestore_=true;contextRev_++;
  }
  void prepare(double rate,int /*maxBlock*/)override{
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
   desktopRate_.reset(44100,unsigned(std::lround(rate)),true);desktopMidiCount_=0;setLatency(int(desktopRate_.latency()));
 #else
   (void)rate;
 #endif
  }
  void process(mpc::ProcessContext&ctx)override{
-#ifdef __APPLE__
+#if defined(__APPLE__) || defined(_WIN32)
   if(desktopRate_.converting()){
    int midi=0;
    for(int frame=0;frame<ctx.numFrames;){

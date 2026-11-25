@@ -1,3 +1,4 @@
+#define MOVE_STATE_PLAITS_HARMONICS 1
 /* =============================================================================
  * vst2_wrap.c — expose an engine (wrapper/engine.h) as a Linux VST2 plugin so
  * the built-in plugin host (JUCE) of MPC OS standalone devices can load it as a native track
@@ -237,6 +238,17 @@ static float str_to_norm(const param_t *p, const char *s) {
 static __thread int absolute_set;
 
 static float get_norm(wrap_t *w, int i) {
+    /* Match the source's serialized Harmonics precision. Its three-decimal
+     * numeric getter can put a 6-op selector in the adjacent program bin. */
+    if (i >= 0 && i < NPARAMS && !strcmp(PARAMS[i].key,"harmonics")) {
+        char state[2048];
+        if (eng_get(w,"state",state,sizeof state) > 0) {
+            const char *at=strstr(state,"\"harmonics\":");
+            if (at) {char *end;float value=strtof(at+12,&end);
+                if(end!=at+12&&isfinite(value)) return clamp01(value);}
+        }
+    }
+
     char buf[64];
     if (i < 0 || i >= NPARAMS) return 0;
     if (i == 0 && __atomic_load_n(&w->has_pend0, __ATOMIC_ACQUIRE)) {   /* set, not applied yet */

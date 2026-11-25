@@ -215,6 +215,38 @@
       "notes": "MPC drum engine; retained ER-99 cymbal source notices.",
       "url": "https://github.com/sd88me/mpc-vst-TR-MPC",
       "role": "kit-source"
+    },
+    {
+      "name": "Amino",
+      "authors": "Amino contributors; klaine",
+      "license": "MIT; AKWF waveforms: CC0",
+      "url": "https://github.com/klaine/amino",
+      "notes": "Original wavetable DSP, factory presets and notices.",
+      "role": "engine"
+    },
+    {
+      "name": "Fizzik",
+      "authors": "Filliformes",
+      "license": "MIT",
+      "url": "https://github.com/filliformes/fizzik-move",
+      "notes": "Original physical modeling DSP and factory presets.",
+      "role": "engine"
+    },
+    {
+      "name": "Weird Dreams",
+      "authors": "Daniele Filaretti; Vincent Fillion",
+      "license": "MIT",
+      "url": "https://github.com/filliformes/weird-dreams-move",
+      "notes": "WeirdDrums original DSP by Daniele Filaretti (MIT), ported and expanded for Schwung by Vincent Fillion. Original notices retained; sixteen-pad bank pairing by Jazzy Rhythmer.",
+      "role": "engine"
+    },
+    {
+      "name": "KrautDrums",
+      "authors": "Vincent Filliforme",
+      "license": "MIT",
+      "url": "https://github.com/filliformes/krautdrums-move",
+      "notes": "Original sixteen percussion voices and notices.",
+      "role": "engine"
     }
   ],
   "scope": "Attribution summary. Full copyright and license texts, dependency notices and pinned source provenance are retained in Licenses/ and SOURCE-INDEX.json."

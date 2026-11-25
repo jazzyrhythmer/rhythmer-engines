@@ -1,0 +1,69 @@
+{
+  "pad_layout": "drums",
+  "levels": {
+    "0": {
+      "note": 36,
+      "name": "Bass-drum"
+    },
+    "1": {
+      "note": 37,
+      "name": "Conga"
+    },
+    "2": {
+      "note": 38,
+      "name": "Tom 1"
+    },
+    "3": {
+      "note": 39,
+      "name": "Tom 2"
+    },
+    "4": {
+      "note": 40,
+      "name": "Claves"
+    },
+    "5": {
+      "note": 41,
+      "name": "Snare"
+    },
+    "6": {
+      "note": 42,
+      "name": "Short cym"
+    },
+    "7": {
+      "note": 43,
+      "name": "Long cym"
+    },
+    "8": {
+      "note": 44,
+      "name": "Cow Bell"
+    },
+    "9": {
+      "note": 45,
+      "name": "Bass 2"
+    },
+    "10": {
+      "note": 46,
+      "name": "Tom 3"
+    },
+    "11": {
+      "note": 47,
+      "name": "Conga 2"
+    },
+    "12": {
+      "note": 48,
+      "name": "Claves 2"
+    },
+    "13": {
+      "note": 49,
+      "name": "Snare 2"
+    },
+    "14": {
+      "note": 50,
+      "name": "Mid cym"
+    },
+    "15": {
+      "note": 51,
+      "name": "Cow Bell 2"
+    }
+  }
+}

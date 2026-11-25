@@ -5,12 +5,18 @@
 #include "LiveArt.h"
 #include "MidiWorkspace.h"
 #include "MidiView.h"
-#include <dlfcn.h>
+
 #include <fstream>
 namespace desktop {
-static constexpr int desktopParameterCount=97;
+static constexpr int desktopParameterCount=103;
+static int nativeParameter(int p){return p<97?p:p+82;}
 static void anchor(){}
-static juce::File resources(){Dl_info i{};if(!dladdr((void*)&anchor,&i)||!i.dli_fname)return {};return juce::File(i.dli_fname).getParentDirectory().getParentDirectory().getChildFile("Resources");}
+#if defined(_WIN32)
+static constexpr const char* backendExtension=".dll";
+#else
+static constexpr const char* backendExtension=".dylib";
+#endif
+static juce::File resources(){auto path=re::containingLibrary(reinterpret_cast<const void*>(&anchor));if(path.empty())return {};return juce::File(juce::String::fromUTF8(path.c_str())).getParentDirectory().getParentDirectory().getChildFile("Resources");}
 static juce::Typeface::Ptr loadFace(const char* filename,float weight){juce::MemoryBlock bytes;resources().getChildFile(juce::String("Fonts/")+filename).loadFileAsData(bytes);if(!bytes.getSize())return {};auto face=juce::Typeface::createSystemTypefaceFor(bytes.getData(),bytes.getSize());if(face){const juce::FontVariableSetting setting{juce::FontFeatureTag("wght"),weight};if(auto weighted=face->cloneWithVariableSettings({&setting,1}))return weighted;}return face;}
 class Processor;
 class Parameter final:public juce::AudioProcessorParameterWithID {
@@ -33,7 +39,7 @@ public:
  std::array<float,desktopParameterCount> publishedValues{};std::array<std::string,24> publishedNames{};
  std::array<bool,128> visualKeys{};bool visualSustain=false;double visualSampleRate=44100;float visualEnvelope=0;
  Processor():AudioProcessor(BusesProperties().withOutput("Output",juce::AudioChannelSet::stereo(),true)){
-  try{auto r=resources();std::ifstream f(r.getChildFile("Content/catalog.json").getFullPathName().toStdString());if(!f)throw std::runtime_error("Missing sound catalog");f>>catalog;core=std::make_unique<re::Core>("",0,r.getChildFile("Backend/rhythmer-engines.dylib").getFullPathName().toStdString());}
+  try{auto r=resources();auto text=r.getChildFile("Content/catalog.json").loadFileAsString();if(text.isEmpty())throw std::runtime_error("Missing sound catalog");catalog=re::Json::parse(text.toStdString());core=std::make_unique<re::Core>("",0,r.getChildFile(juce::String("Backend/rhythmer-engines")+backendExtension).getFullPathName().toStdString());}
   catch(const std::exception&e){error=e.what();}
   routedMidi.ensureSize(65536);
   for(int i=0;i<desktopParameterCount;i++){addParameter(new Parameter(*this,i));publishedValues[i]=value(i);}
@@ -68,32 +74,32 @@ if(m.getRawDataSize()>3||packet.numEvents==512)continue;int i=packet.numEvents++
  }
  bool acceptsMidi()const override{return true;}bool producesMidi()const override{return false;}double getTailLengthSeconds()const override{return 10;}
  int getNumPrograms()override{return 1;}int getCurrentProgram()override{return 0;}void setCurrentProgram(int)override{}const juce::String getProgramName(int)override{return "Default";}void changeProgramName(int,const juce::String&)override{}
- void getStateInformation(juce::MemoryBlock&out)override{if(core){auto b=core->state();writeWorkspace(b,midiWorkspace.snapshot());out.replaceAll(b.data(),b.size());}}
- void setStateInformation(const void*d,int n)override{if(core&&n>0&&n<16*1024*1024){auto*b=(const uint8_t*)d;std::vector<uint8_t> bytes(b,b+n);core->restore(bytes);midiWorkspace.restore(readWorkspace(bytes));}}
+ void getStateInformation(juce::MemoryBlock&out)override{const juce::ScopedLock lock(getCallbackLock());if(core){auto b=core->state();writeWorkspace(b,midiWorkspace.snapshot());out.replaceAll(b.data(),b.size());}}
+ void setStateInformation(const void*d,int n)override{const juce::ScopedLock lock(getCallbackLock());if(core&&n>0&&n<16*1024*1024){auto*b=(const uint8_t*)d;std::vector<uint8_t> bytes(b,b+n);core->restore(bytes);midiWorkspace.restore(readWorkspace(bytes));}}
  bool hasEditor()const override{return true;}juce::AudioProcessorEditor*createEditor()override;
- float value(int p)const{return core?core->get(p):0;}juce::String name(int p)const{return core?juce::String(core->name(p)):"Unavailable";}
- juce::String display(int p)const{if(!core)return error;char text[1024]{};core->dispatch(effGetParamDisplay,p,0,text);return juce::String(text);}
+ float value(int p)const{return core?core->get(nativeParameter(p)):0;}juce::String name(int p)const{return core?juce::String(core->name(nativeParameter(p))):"Unavailable";}
+ juce::String display(int p)const{if(!core)return error;char text[1024]{};core->dispatch(effGetParamDisplay,nativeParameter(p),0,text);return juce::String(text);}
  void edit(int p,float value){if(p<0||p>=getParameters().size())return;auto*q=getParameters()[p];q->beginChangeGesture();q->setValueNotifyingHost(value);q->endChangeGesture();}
 };
 Parameter::Parameter(Processor&o,int i):AudioProcessorParameterWithID(juce::ParameterID("rhythmer_"+juce::String(i),1),"Parameter "+juce::String(i)),owner(o),index(i),initial(o.value(i)){}
-float Parameter::getValue()const{return owner.value(index);}void Parameter::setValue(float v){if(owner.core)owner.core->set(index,v);}
+float Parameter::getValue()const{return owner.value(index);}void Parameter::setValue(float v){if(owner.core)owner.core->set(nativeParameter(index),v);}
 juce::String Parameter::getName(int max)const{auto text=owner.name(index);return max>0?text.substring(0,max):text;}juce::String Parameter::getText(float v,int max)const{
  juce::String text;auto item=[&](const re::Json&list,float scale){int i=int(std::lround(std::clamp(v,0.f,1.f)*scale));return i>=0&&i<int(list.size())?juce::String(list[i]["name"].get<std::string>()):juce::String("--");};
  if(!owner.catalog.is_null()&&index==1)text=item(owner.catalog["entries"],float(owner.catalog["entries"].size()-1));
  else if(!owner.catalog.is_null()&&index==22)text=item(owner.catalog["kits"],float(owner.catalog["kits"].size()-1));
  else if(index==3)text="PAD "+juce::String(1+int(std::lround(v*15)));
  else if(index==4)text=juce::StringArray{"ALL","SOUND","MOD","FX"}[std::clamp(int(std::lround(v*3)),0,3)];
- else if(!owner.catalog.is_null()&&(index==23||(index>=47&&index<73))){std::vector<int>sources;for(int i=0;i<int(owner.catalog["sources"].size());i++)if(owner.catalog["sources"][i]["name"]!="Acid Engine")sources.push_back(i);int pick=index==23?std::clamp(int(std::lround(v*(sources.size()-1))),0,int(sources.size()-1)):index-47;const auto&source=owner.catalog["sources"][sources[pick]];text=index==23?juce::String(source["name"].get<std::string>()):item(source["sounds"],float(source["sounds"].size()-1));}
- else if(index>=28&&index<47&&!owner.catalog.is_null()){int source=owner.catalog["entries"][index-27]["source_index"];const auto&list=owner.catalog["sources"][source]["sounds"];text=item(list,float(list.size()-1));}
+ else if(!owner.catalog.is_null()&&(index==23||(((index>=47&&index<73)||(index>=99&&index<103))))){std::vector<int>sources;for(int i=0;i<int(owner.catalog["sources"].size());i++)if(owner.catalog["sources"][i]["name"]!="Acid Engine")sources.push_back(i);int pick=index==23?std::clamp(int(std::lround(v*(sources.size()-1))),0,int(sources.size()-1)):index>=99?index-73:index-47;const auto&source=owner.catalog["sources"][sources[pick]];text=index==23?juce::String(source["name"].get<std::string>()):item(source["sounds"],float(source["sounds"].size()-1));}
+ else if(((index>=28&&index<47)||(index>=97&&index<99))&&!owner.catalog.is_null()){int source=owner.catalog["entries"][(index>=97?index-77:index-27)]["source_index"];const auto&list=owner.catalog["sources"][source]["sounds"];text=item(list,float(list.size()-1));}
  else text=std::abs(v-getValue())<.0001f?owner.display(index):juce::String(v,3);
  return max>0?text.substring(0,max):text;
-}bool Parameter::isAutomatable()const{return owner.core&&owner.core->dispatch(effCanBeAutomated,index)!=0;}
+}bool Parameter::isAutomatable()const{return owner.core&&owner.core->dispatch(effCanBeAutomated,nativeParameter(index))!=0;}
 bool Parameter::isMetaParameter()const{return index!=0&&getCategory()==genericParameter;}
 juce::AudioProcessorParameter::Category Parameter::getCategory()const{return index==25||index==26||(index>=73&&index<89)?otherMeter:genericParameter;}
 int Parameter::getNumSteps()const{
- switch(index){case 1:return 20;case 3:return 16;case 4:return 4;case 22:return owner.catalog.contains("kits")?int(owner.catalog["kits"].size()):36;case 23:return owner.catalog.contains("sources")?int(owner.catalog["sources"].size())-1:26;case 27:return 2;default:break;}
- if(index>=28&&index<47&&!owner.catalog.is_null()){int source=owner.catalog["entries"][index-27]["source_index"];return int(owner.catalog["sources"][source]["sounds"].size());}
- if(index>=47&&index<73&&!owner.catalog.is_null()){int selected=index-47;for(const auto&source:owner.catalog["sources"])if(source["name"]!="Acid Engine"&&selected--==0)return int(source["sounds"].size());}
+ switch(index){case 1:return owner.catalog.contains("entries")?int(owner.catalog["entries"].size()):22;case 3:return 16;case 4:return 4;case 22:return owner.catalog.contains("kits")?int(owner.catalog["kits"].size()):36;case 23:return owner.catalog.contains("sources")?int(owner.catalog["sources"].size())-1:26;case 27:return 2;default:break;}
+ if(((index>=28&&index<47)||(index>=97&&index<99))&&!owner.catalog.is_null()){int source=owner.catalog["entries"][(index>=97?index-77:index-27)]["source_index"];return int(owner.catalog["sources"][source]["sounds"].size());}
+ if(((index>=47&&index<73)||(index>=99&&index<103))&&!owner.catalog.is_null()){int selected=index>=99?index-73:index-47;for(const auto&source:owner.catalog["sources"])if(source["name"]!="Acid Engine"&&selected--==0)return int(source["sounds"].size());}
  return getDefaultNumParameterSteps();
 }
 bool Parameter::isDiscrete()const{return getNumSteps()!=getDefaultNumParameterSteps();}
@@ -155,7 +161,7 @@ class Editor final:public juce::AudioProcessorEditor,private juce::Timer {
  void choose(juce::ComboBox&box,int control,int count){box.onChange=[this,&box,control,count]{if(!updating)p.edit(control,float(box.getSelectedId()-1)/std::max(1,count-1));};}
  void setTab(int i){tab=i;sub=0;for(int k=0;k<3;k++)tabs[k].setToggleState(k==i,juce::dontSendNotification);refresh();resized();}
  void refresh(){updating=true;int e=int(std::lround(p.value(1)*float(p.catalog["entries"].size()-1)));if(!available(tab,e)){tab=(tab==2||tab==4||tab==5)?contextualPage(e):0;if(tab<0)tab=0;sub=0;}for(int k=0;k<3;k++){tabs[k].setVisible(k==0||k==1||k==contextualPage(e));tabs[k].setEnabled(available(k,e));tabs[k].setToggleState(k==tab,juce::dontSendNotification);}engine.setSelectedId(e+1,juce::dontSendNotification);pad.setSelectedId(int(std::lround(p.value(3)*15))+1,juce::dontSendNotification);
-  if(e!=currentEngine){currentEngine=e;static const char* artNames[]={"Sophie","Aphex","Elixir","FM-106","FMini-1","CS-1","OberVave","K-WASUB","Hera","Braids","Plaits","Hortator","MONO2K","Prophet","S1Vave","Dexed","Guru-600","Acid Engine","Rhythmer Kit","Break Engine","Frodhes","Tenebrae"};currentArt=0;auto artName=p.catalog["entries"][e]["name"].get<std::string>();for(int i=0;i<22;i++)if(artName==artNames[i]){currentArt=i;break;}std::vector<juce::String>s;int control=2,count=2048;
+  if(e!=currentEngine){currentEngine=e;static const char* artNames[]={"Sophie","Aphex","Elixir","FM-106","FMini-1","CS-1","OberVave","K-WASUB","Hera","Braids","Plaits","Hortator","MONO2K","Prophet","S1Vave","Dexed","Guru-600","Acid Engine","Rhythmer Kit","Break Engine","Frodhes","Tenebrae","Amino","Fizzik"};currentArt=0;auto artName=p.catalog["entries"][e]["name"].get<std::string>();for(int i=0;i<int(std::size(artNames));i++)if(artName==artNames[i]){currentArt=i;break;}std::vector<juce::String>s;int control=2,count=2048;
    if(!p.catalog.is_null()&&p.catalog.contains("entries")){
     if(e==0){for(auto&k:p.catalog["kits"])s.emplace_back(k["name"].get<std::string>());control=22;count=int(s.size());}
     else{int source=p.catalog["entries"][e]["source_index"];for(auto&v:p.catalog["sources"][source]["sounds"])s.emplace_back(v["name"].get<std::string>());}

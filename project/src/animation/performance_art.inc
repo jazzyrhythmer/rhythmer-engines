@@ -6,9 +6,9 @@
 #include <algorithm>
 #include <cmath>
 inline int performance_kind(const juce::String& name) {
-    static const char* names[]{"Sophie","Aphex","Elixir","FM-106","FMini-1","CS-1","OberVave","K-WASUB","Hera","Braids","Plaits","Hortator","MONO2K","Prophet","S1Vave","Dexed","Guru-600","Acid Engine","Rhythmer Kit","Break Engine","Frodhes","Tenebrae"};
+    static const char* names[]{"Sophie","Aphex","Elixir","FM-106","FMini-1","CS-1","OberVave","K-WASUB","Hera","Braids","Plaits","Hortator","MONO2K","Prophet","S1Vave","Dexed","Guru-600","Acid Engine","Rhythmer Kit","Break Engine","Frodhes","Tenebrae","Amino","Fizzik"};
     for(unsigned i=0;i<sizeof(names)/sizeof(*names);++i)if(name==names[i])return int(i);
-    return 22;
+    return 25;
 }
 template<class Signal>
 inline void performance_art(ui::Paint& p,const Signal& s,const juce::String& name,const juce::String& preset,float x,float y,float w,float h,int selected=-1,float opacity=1.0f,bool fit=false) {
@@ -271,6 +271,19 @@ inline void performance_art(ui::Paint& p,const Signal& s,const juce::String& nam
             V lt{-spread,.46f,z},mt{0,fold,z-.16f},rt{spread,.46f,z};
             add(l,m0,mt,lt,.3f+float(i)*.055f);add(m0,r0,rt,mt,.78f-float(i)*.045f);
         }
+        break;
+    case 22: // Amino: four wavetable layers, one moving surface per layer.
+        for(int layer=0;layer<4;++layer)for(int u=0;u<12;++u){
+            auto point=[&](int n,int edge){float xx=(float(n)/12-.5f)*2.7f;
+                float yy=(float(layer)-1.5f)*.33f+a*.16f*std::sin(xx*(2+layer*.35f)+phrase+layer);
+                return V{xx,yy,float(edge?1:-1)*.45f+.12f*std::cos(xx*2+phrase*.4f+layer)};};
+            add(point(u,0),point(u+1,0),point(u+1,1),point(u,1),.35f+layer*.15f);
+        }
+        break;
+    case 23: // Fizzik: two coupled resonators with a vibrating bridge.
+        lathe({-.62f,0,0},.41f,.95f+a*.15f,16,8,1);
+        lathe({.62f,0,0},.41f,1.2f+a*.12f*std::sin(phrase),16,8,1);
+        for(int n=0;n<10;++n){float xx=(n/9.f-.5f)*1.2f;box({xx,.13f*a*std::sin(phrase*2+n*.7f),0},{.06f,.025f,.035f},.8f);}
         break;
     default:lathe({0,0,0},.9f,1.5f,24,8,1);
         break;

@@ -2,14 +2,14 @@
 #include "mini.h"
 #include "performance_art.inc"
 static char preset_buffer[512]{};
-static const char* names[]{"Sophie","Aphex","Elixir","FM-106","FMini-1","CS-1","OberVave","K-WASUB","Hera","Braids","Plaits","Hortator","MONO2K","Prophet","S1Vave","Dexed","Guru-600","Acid Engine","Rhythmer Kit","Break Engine","Frodhes","Tenebrae"};
+static const char* names[]{"Sophie","Aphex","Elixir","FM-106","FMini-1","CS-1","OberVave","K-WASUB","Hera","Braids","Plaits","Hortator","MONO2K","Prophet","S1Vave","Dexed","Guru-600","Acid Engine","Rhythmer Kit","Break Engine","Frodhes","Tenebrae","Amino","Fizzik"};
 extern "C" {
 __attribute__((visibility("default"))) char* art_preset(){return preset_buffer;}
 __attribute__((visibility("default"))) float* art_faces(){return reinterpret_cast<float*>(polygons);}
 __attribute__((visibility("default"))) unsigned art_count(){return polygon_count;}
 __attribute__((visibility("default"))) unsigned art_frame(int kind,unsigned now,int note,int held,float level,int pad,float w,float h,int fit){
  polygon_count=0;ArtSignal s;s.now=now;s.part.last_note=note;s.held_keys.fill(-1);if(held)s.held_keys[0]=note;s.meters[0]=level;
- ui::Paint p;performance_art(p,s,names[std::clamp(kind,0,21)],juce::String(preset_buffer),0,0,w,h,pad,1,fit!=0);return polygon_count;
+ ui::Paint p;performance_art(p,s,names[std::clamp(kind,0,23)],juce::String(preset_buffer),0,0,w,h,pad,1,fit!=0);return polygon_count;
 }
 }
 // A native reference executable exercises the exact same unchanged source.
