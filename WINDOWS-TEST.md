@@ -15,6 +15,8 @@ On → Rescan. Search Plug-Ins for Rhythmer Engines and drag it to a MIDI track.
 REAPER: Options → Preferences → Plug-ins → VST → Re-scan. Insert → Virtual instrument
 on new track → Rhythmer Engines. Arm the track and enable input monitoring.
 
+Factory sounds are selected inside the plug-in with ENGINE and PRESET; the DAW's own preset menu may show Default or saved host presets.
+
 ## Test
 1. Rhythmer Kit / K-WASUB / 909 loads first. Play MIDI notes 36–51, all sixteen pads.
    DAW octave names differ; note numbers are the reference.

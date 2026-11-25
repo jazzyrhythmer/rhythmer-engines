@@ -12,6 +12,8 @@ Use ENGINE and PRESET to choose an individual synth and play chromatically.
 MIDI comes from the DAW, pads or the on-screen keyboard. GEN creates MIDI clips for your DAW. There is no separate internal sequencer,
 dedicated Acid Engine or Break Engine.
 
+Factory sounds are selected inside the plug-in with ENGINE and PRESET. Your DAW's own preset menu may show Default or saved host presets instead.
+
 ## Screens
 
 - PLAY: original live animation; eight direct sound controls, four on either side.
