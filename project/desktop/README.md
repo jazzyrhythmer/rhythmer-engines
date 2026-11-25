@@ -1,4 +1,4 @@
-# Rhythmer Engines — desktop candidate
+# Rhythmer Engines — Mac & Windows
 
 By Jazzy Rhythmer. Mac: Apple Silicon, macOS 13 or later, AU / VST2 / VST3. Windows: Windows 10/11 x64, VST3.
 
@@ -73,10 +73,3 @@ support depend on the host. A file export is always available separately.
 
 Some Aphex drone programs have an original Hold of 8–20 seconds. Hold a note
 long enough to hear these sounds. Their factory envelopes have not been shortened.
-
-## Candidate validation
-
-This is a private candidate, not a public release. Mac automated audio, state and
-editor tests are recorded separately. Windows binaries are cross-compiled; final
-Windows DAW listening, transport-stop, state recall and MIDI-drag acceptance must
-be checked on a Windows PC before public release.
